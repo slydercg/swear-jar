@@ -440,6 +440,81 @@
     .activity-del-btn:active { background: rgba(255,68,68,.3); }
     .activity-row.deleted-log { opacity: 0.65; }
     .activity-badge.deleted { background: rgba(255,68,68,.15); color: #ff6b6b; }
+
+    /* ════════ ALEXA SETTINGS ════════ */
+    .alexa-card {
+      background: var(--surface); border-radius: 16px; padding: 14px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .alexa-status-row {
+      display: flex; align-items: center; gap: 8px; font-size: 13px;
+    }
+    .alexa-dot {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+      background: #555;
+    }
+    .alexa-dot.connected { background: #4caf50; box-shadow: 0 0 6px rgba(76,175,80,.6); }
+    .alexa-dot.disconnected { background: #888; }
+    .alexa-status-text { color: var(--muted); font-size: 12px; }
+    .alexa-field-label {
+      font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--muted); margin-bottom: 4px;
+    }
+    .alexa-input {
+      width: 100%; background: var(--bg); border: 1.5px solid var(--border);
+      border-radius: 12px; padding: 10px 12px; color: #fff;
+      font-size: 13px; font-family: inherit; box-sizing: border-box;
+      -webkit-appearance: none;
+    }
+    .alexa-input:focus { outline: none; border-color: #00c5d4; }
+    .alexa-copy-row {
+      display: flex; gap: 8px; align-items: center;
+    }
+    .alexa-copy-val {
+      flex: 1; background: var(--bg); border: 1.5px solid var(--border);
+      border-radius: 12px; padding: 9px 12px; color: var(--muted);
+      font-size: 12px; font-family: monospace; overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap;
+    }
+    .btn-alexa-copy {
+      padding: 9px 14px; border: none; border-radius: 12px;
+      background: rgba(0,197,212,.15); color: #00c5d4;
+      font-size: 12px; font-weight: 600; cursor: pointer; flex-shrink: 0;
+      -webkit-appearance: none;
+    }
+    .btn-alexa-copy:active { opacity: .75; }
+    .btn-alexa-console {
+      width: 100%; padding: 13px; border: none; border-radius: 14px;
+      background: linear-gradient(135deg, #00b9c9 0%, #007cad 100%);
+      color: #fff; font-size: 14px; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      -webkit-appearance: none;
+    }
+    .btn-alexa-console:active { opacity: .85; }
+    .alexa-examples {
+      display: flex; flex-direction: column; gap: 7px;
+    }
+    .alexa-example-row {
+      background: var(--bg); border-radius: 12px; padding: 9px 13px;
+      font-size: 13px; line-height: 1.4;
+    }
+    .alexa-example-row .wake { color: #00c5d4; font-weight: 600; }
+    .alexa-example-row .command { color: #fff; }
+    .alexa-hint { font-size: 11px; color: var(--muted); line-height: 1.5; }
+    .alexa-setup-steps {
+      background: var(--bg); border-radius: 12px; padding: 12px 14px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .alexa-step {
+      display: flex; gap: 10px; align-items: flex-start; font-size: 12px;
+      color: var(--muted); line-height: 1.4;
+    }
+    .alexa-step-num {
+      width: 20px; height: 20px; border-radius: 50%;
+      background: rgba(0,197,212,.2); color: #00c5d4;
+      font-size: 11px; font-weight: 700; display: flex;
+      align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;
+    }
   </style>
 </head>
 <body>
@@ -565,6 +640,61 @@
             <button class="btn-db-save" onclick="saveFbConfigFromForm()">💾 Save &amp; Connect</button>
             <button class="btn-db-clear" onclick="clearFbConfig()">✕ Disconnect</button>
           </div>
+        </div>
+      </div>
+
+      <!-- Alexa Integration — admin only -->
+      <div id="alexa-section" style="display:none">
+        <div class="settings-section-label" style="margin-top:8px">Alexa Integration</div>
+        <div class="settings-section-hint">Connect an Alexa skill so you can say <em>"Alexa, tell swear jar to charge Delaney"</em> and it logs instantly.</div>
+        <div class="alexa-card">
+
+          <!-- Status -->
+          <div class="alexa-status-row">
+            <div class="alexa-dot disconnected" id="alexa-dot"></div>
+            <span class="alexa-status-text" id="alexa-status-text">Not configured — enter your Skill ID below</span>
+          </div>
+
+          <!-- Skill ID input -->
+          <div>
+            <div class="alexa-field-label">Alexa Skill ID</div>
+            <input id="alexa-skill-id-input" class="alexa-input" type="text"
+              placeholder="amzn1.ask.skill.XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"
+              maxlength="120" oninput="updateAlexaStatus()" />
+            <div class="alexa-hint" style="margin-top:4px">Find this in Alexa Developer Console → your skill URL. Save Settings after pasting.</div>
+          </div>
+
+          <!-- Firebase URL (read-only, for pasting into Lambda) -->
+          <div>
+            <div class="alexa-field-label">Firebase URL (for Lambda config)</div>
+            <div class="alexa-copy-row">
+              <div class="alexa-copy-val" id="alexa-fb-url">https://swear-jar-ef967-default-rtdb.firebaseio.com</div>
+              <button class="btn-alexa-copy" onclick="copyAlexaFbUrl()">📋 Copy</button>
+            </div>
+            <div class="alexa-hint" style="margin-top:4px">Paste this into <code>FIREBASE_DB_URL</code> in the Lambda index.js.</div>
+          </div>
+
+          <!-- Voice examples -->
+          <div>
+            <div class="alexa-field-label">Voice Commands</div>
+            <div class="alexa-examples" id="alexa-examples"></div>
+          </div>
+
+          <!-- Setup steps -->
+          <div>
+            <div class="alexa-field-label">Quick Setup</div>
+            <div class="alexa-setup-steps">
+              <div class="alexa-step"><div class="alexa-step-num">1</div><div>Open Alexa Developer Console → Create skill → Custom + Alexa-hosted (Node.js)</div></div>
+              <div class="alexa-step"><div class="alexa-step-num">2</div><div>Set invocation name to <strong>swear jar</strong></div></div>
+              <div class="alexa-step"><div class="alexa-step-num">3</div><div>Paste <code>interaction-model.json</code> into JSON Editor → Build Model</div></div>
+              <div class="alexa-step"><div class="alexa-step-num">4</div><div>Paste <code>index.js</code> into Code tab, update <code>FIREBASE_DB_URL</code> → Deploy</div></div>
+              <div class="alexa-step"><div class="alexa-step-num">5</div><div>Copy Skill ID from the URL → paste above → Save Settings</div></div>
+            </div>
+          </div>
+
+          <button class="btn-alexa-console" onclick="window.open('https://developer.amazon.com/alexa/console/ask','_blank')">
+            🔗 Open Alexa Developer Console ↗
+          </button>
         </div>
       </div>
 
@@ -795,6 +925,63 @@
     const el = document.getElementById('firebase-config-input');
     if (el) el.value = '';
     toast('Disconnected from Firebase');
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  ALEXA INTEGRATION HELPERS
+  // ══════════════════════════════════════════════════════
+  const ALEXA_SKILL_KEY = 'swearjar2-alexa-skill-id';
+
+  function loadAlexaSkillId() {
+    return localStorage.getItem(ALEXA_SKILL_KEY) || '';
+  }
+
+  function saveAlexaSkillId(id) {
+    if (id) localStorage.setItem(ALEXA_SKILL_KEY, id.trim());
+    else localStorage.removeItem(ALEXA_SKILL_KEY);
+  }
+
+  function updateAlexaStatus() {
+    const dot  = document.getElementById('alexa-dot');
+    const text = document.getElementById('alexa-status-text');
+    const inp  = document.getElementById('alexa-skill-id-input');
+    if (!dot || !text) return;
+    const val = (inp ? inp.value : loadAlexaSkillId()).trim();
+    const isSet = val.startsWith('amzn1.ask.skill.');
+    dot.className  = 'alexa-dot ' + (isSet ? 'connected' : 'disconnected');
+    text.textContent = isSet
+      ? '✅ Skill ID saved — Alexa is connected'
+      : (val ? '⚠️ Skill ID looks incorrect (should start with amzn1.ask.skill.)' : 'Not configured — enter your Skill ID below');
+  }
+
+  function copyAlexaFbUrl() {
+    const el = document.getElementById('alexa-fb-url');
+    const url = el ? el.textContent.trim() : FIREBASE_DB_URL || '';
+    navigator.clipboard.writeText(url).then(() => toast('📋 Firebase URL copied!')).catch(() => {
+      const ta = document.createElement('textarea');
+      ta.value = url; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta);
+      toast('📋 Firebase URL copied!');
+    });
+  }
+
+  function renderAlexaExamples() {
+    const el = document.getElementById('alexa-examples');
+    if (!el) return;
+    const examples = KIDS.map(k => ({
+      wake: 'Alexa, tell swear jar to',
+      cmd:  `charge ${k}`
+    }));
+    // Show first 3 examples
+    el.innerHTML = examples.slice(0, 3).map(e =>
+      `<div class="alexa-example-row">
+        <span class="wake">${e.wake}</span>
+        <span class="command"> ${e.cmd}</span>
+      </div>`
+    ).join('') + `<div class="alexa-example-row">
+      <span class="wake">Alexa, ask swear jar to</span>
+      <span class="command"> add one to ${KIDS[0]||'Delaney'}</span>
+    </div>`;
   }
 
   // ══════════════════════════════════════════════════════
@@ -1511,6 +1698,24 @@
         cfgEl.value = JSON.stringify(existingCfg, null, 2);
       }
     }
+
+    // Alexa integration section — admin only
+    const alexaSection = document.getElementById('alexa-section');
+    if (alexaSection) alexaSection.style.display = (currentUser === 'admin') ? '' : 'none';
+    if (currentUser === 'admin') {
+      const skillInp = document.getElementById('alexa-skill-id-input');
+      if (skillInp && !skillInp.value.trim()) {
+        skillInp.value = loadAlexaSkillId();
+      }
+      // Populate Firebase URL from the live config
+      const fbUrlEl = document.getElementById('alexa-fb-url');
+      if (fbUrlEl) {
+        const cfg = loadFbConfig();
+        fbUrlEl.textContent = (cfg && cfg.databaseURL) ? cfg.databaseURL : 'https://swear-jar-ef967-default-rtdb.firebaseio.com';
+      }
+      renderAlexaExamples();
+      updateAlexaStatus();
+    }
   }
 
   function addSettingsRow() {
@@ -1534,9 +1739,15 @@
     COLOR_HEX=Object.fromEntries(settings.map(s=>[s.name,s.color]));
     EMOJI    =Object.fromEntries(settings.map((s,i)=>[s.name,SLOT_EMOJI[i]??'🧒']));
     PAY_INFO =Object.fromEntries(settings.map(s=>[s.name,s.paymentInfo??'']));
-    const ns={kids:{},history:state.history,monthlyResults:state.monthlyResults};
+    const ns={kids:{},history:state.history,monthlyResults:state.monthlyResults,currentMonth:state.currentMonth};
     KIDS.forEach((name,i)=>{const on=oldKids[i];ns.kids[name]=(on&&state.kids[on])?state.kids[on]:(state.kids[name]??{amount:0,swears:0});});
-    state=ns; save(); renderSettings(); render(); toast('Settings saved! ✅');
+    state=ns;
+    // Save Alexa Skill ID if admin
+    if (currentUser === 'admin') {
+      const skillInp = document.getElementById('alexa-skill-id-input');
+      if (skillInp) { saveAlexaSkillId(skillInp.value.trim()); updateAlexaStatus(); }
+    }
+    save(); renderSettings(); render(); toast('Settings saved! ✅');
   }
 
   // ══════════════════════════════════════════════════════

@@ -1,0 +1,135 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "swear jar",
+      "intents": [
+        {
+          "name": "ChargeKidIntent",
+          "description": "Charges a kid one dollar by name",
+          "slots": [
+            {
+              "name": "KidName",
+              "type": "KidNameType",
+              "samples": [
+                "{KidName}",
+                "charge {KidName}",
+                "charge {KidName} a dollar",
+                "add one to {KidName}",
+                "add a dollar to {KidName}",
+                "{KidName} swore",
+                "{KidName} said a bad word",
+                "fine {KidName}",
+                "fine {KidName} a dollar",
+                "{KidName} owes a dollar",
+                "put a dollar on {KidName}",
+                "log one for {KidName}",
+                "log a swear for {KidName}",
+                "mark one for {KidName}",
+                "add a swear to {KidName}"
+              ]
+            }
+          ],
+          "samples": [
+            "charge {KidName}",
+            "charge {KidName} a dollar",
+            "add one to {KidName}",
+            "add a dollar to {KidName}",
+            "{KidName} swore",
+            "{KidName} said a bad word",
+            "fine {KidName}",
+            "fine {KidName} a dollar",
+            "{KidName} owes a dollar",
+            "put a dollar on {KidName}",
+            "log one for {KidName}",
+            "log a swear for {KidName}",
+            "mark one for {KidName}",
+            "add a swear to {KidName}"
+          ]
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.CancelIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.StopIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.FallbackIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.NavigateHomeIntent",
+          "samples": []
+        }
+      ],
+      "types": [
+        {
+          "name": "KidNameType",
+          "values": [
+            {
+              "name": {
+                "value": "Delaney",
+                "synonyms": ["Laney", "Del"]
+              }
+            },
+            {
+              "name": {
+                "value": "Hadley",
+                "synonyms": ["Had", "Haddie"]
+              }
+            },
+            {
+              "name": {
+                "value": "Emerson",
+                "synonyms": ["Emmy", "Em", "Emme"]
+              }
+            },
+            {
+              "name": {
+                "value": "Grant",
+                "synonyms": ["Grantie"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    "dialog": {
+      "intents": [
+        {
+          "name": "ChargeKidIntent",
+          "confirmationRequired": false,
+          "prompts": {},
+          "slots": [
+            {
+              "name": "KidName",
+              "type": "KidNameType",
+              "confirmationRequired": false,
+              "elicitationRequired": true,
+              "prompts": {
+                "elicitation": "Elicit.Slot.ChargeKidIntent.KidName"
+              }
+            }
+          ]
+        }
+      ],
+      "delegationStrategy": "ALWAYS"
+    },
+    "prompts": [
+      {
+        "id": "Elicit.Slot.ChargeKidIntent.KidName",
+        "variations": [
+          {
+            "type": "PlainText",
+            "value": "Who should I charge? You can say Delaney, Hadley, Emerson, or Grant."
+          }
+        ]
+      }
+    ]
+  }
+}
