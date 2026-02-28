@@ -15,6 +15,11 @@
  *   "Alexa, tell swear jar to charge Grant a dollar"
  *   "Alexa, tell swear jar to add one to Hadley"
  *   "Alexa, ask swear jar to charge Emerson"
+ *
+ * DYNAMIC KID SYNC:
+ *   Kid names are fetched live from Firebase /swearjar/jarSettings on every
+ *   invocation, so Settings changes in the app propagate automatically.
+ *   Fallback to hardcoded names if Firebase is unreachable.
  */
 
 const Alexa = require('ask-sdk-core');
@@ -24,14 +29,20 @@ const https = require('https');
 // Replace with your Firebase Realtime Database URL (no trailing slash)
 const FIREBASE_DB_URL = 'https://swear-jar-ef967-default-rtdb.firebaseio.com';
 
+// Firebase base path for the swear jar data
+const SWEARJAR_PATH = '/swearjar';
+
 // The path in Firebase where game state is stored (matches the PWA)
-const STATE_PATH = '/gameState.json';
+const STATE_PATH = `${SWEARJAR_PATH}/gameState.json`;
+
+// The path where jar settings (kid names) are stored
+const SETTINGS_PATH = `${SWEARJAR_PATH}/jarSettings.json`;
 
 // Amount charged per swear (in dollars)
 const CHARGE_AMOUNT = 1;
 
-// Valid kid names (lowercase) → display name mapping
-const KID_NAMES = {
+// Fallback kid names — used only if Firebase settings can't be fetched
+const FALLBACK_KID_NAMES = {
   delaney: 'Delaney',
   hadley:  'Hadley',
   emerson: 'Emerson',
@@ -69,6 +80,35 @@ function parseDbUrl(url) {
     host: match[1],
     basePath: (match[2] || '').replace(/\/$/, ''),
   };
+}
+
+/**
+ * Fetch kid names dynamically from Firebase /swearjar/jarSettings.
+ * Returns a lowercase-key → display-name map.
+ * Falls back to FALLBACK_KID_NAMES if Firebase is unreachable.
+ */
+async function fetchKidNames() {
+  const { host, basePath } = parseDbUrl(FIREBASE_DB_URL);
+  const path = basePath + SETTINGS_PATH;
+  const options = { hostname: host, path, method: 'GET' };
+  try {
+    const data = await httpsRequest(options);
+    if (!data) return FALLBACK_KID_NAMES;
+    // jarSettings is stored as an array or Firebase-keyed object
+    const settingsArr = Array.isArray(data)
+      ? data
+      : Object.values(data);
+    const result = {};
+    settingsArr
+      .filter(s => s && s.name && typeof s.name === 'string')
+      .forEach(s => {
+        result[s.name.trim().toLowerCase()] = s.name.trim();
+      });
+    return Object.keys(result).length > 0 ? result : FALLBACK_KID_NAMES;
+  } catch(e) {
+    console.warn('fetchKidNames fell back to defaults:', e.message);
+    return FALLBACK_KID_NAMES;
+  }
 }
 
 /**
@@ -135,7 +175,10 @@ const ChargeKidIntentHandler = {
     const slots      = handlerInput.requestEnvelope.request.intent.slots;
     const rawName    = (slots.KidName && slots.KidName.value) || '';
     const normalized = rawName.trim().toLowerCase();
-    const kidKey     = KID_NAMES[normalized];
+
+    // ── Fetch kid names dynamically from Firebase ──
+    const KID_NAMES = await fetchKidNames();
+    const kidKey    = KID_NAMES[normalized];
 
     // ── Validate kid name ──
     if (!kidKey) {
@@ -213,13 +256,17 @@ const LaunchRequestHandler = {
   canHandle(handlerInput) {
     return Alexa.getRequestType(handlerInput.requestEnvelope) === 'LaunchRequest';
   },
-  handle(handlerInput) {
+  async handle(handlerInput) {
+    const KID_NAMES  = await fetchKidNames();
+    const names      = Object.values(KID_NAMES);
+    const firstName  = names[0] || 'someone';
+    const lastName   = names[names.length - 1] || 'someone';
     const speechText =
       'Welcome to Slyder Swear Jar! ' +
-      'You can say things like "charge Delaney" or "add one to Grant". Who should I charge?';
+      `You can say things like "charge ${firstName}" or "add one to ${lastName}". Who should I charge?`;
     return handlerInput.responseBuilder
       .speak(speechText)
-      .reprompt('Who should I charge? Say a name like Delaney, Hadley, Emerson, or Grant.')
+      .reprompt(`Who should I charge? Say a name like ${names.join(', ')}.`)
       .getResponse();
   },
 };
@@ -233,12 +280,15 @@ const HelpIntentHandler = {
       Alexa.getIntentName(handlerInput.requestEnvelope)  === 'AMAZON.HelpIntent'
     );
   },
-  handle(handlerInput) {
+  async handle(handlerInput) {
+    const KID_NAMES  = await fetchKidNames();
     const names      = Object.values(KID_NAMES).join(', ');
+    const firstName  = Object.values(KID_NAMES)[0] || 'Delaney';
+    const lastNameEx = Object.values(KID_NAMES)[Object.values(KID_NAMES).length-1] || 'Grant';
     const speechText =
       `Say "charge" followed by a name to add one dollar. ` +
       `Valid names are: ${names}. ` +
-      `For example, say "charge Delaney" or "add one to Grant".`;
+      `For example, say "charge ${firstName}" or "add one to ${lastNameEx}".`;
     return handlerInput.responseBuilder
       .speak(speechText)
       .reprompt('Who should I charge?')

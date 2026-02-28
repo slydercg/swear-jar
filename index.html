@@ -515,6 +515,80 @@
       font-size: 11px; font-weight: 700; display: flex;
       align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;
     }
+
+    /* ════════ DISPUTE FLAG ════════ */
+    .activity-dispute-btn {
+      width: 28px; height: 28px; border-radius: 8px; border: none;
+      background: rgba(255,152,0,.12); color: #ffa726; font-size: 13px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      padding: 0; flex-shrink: 0; -webkit-appearance: none;
+    }
+    .activity-dispute-btn:active { background: rgba(255,152,0,.3); }
+    .activity-row.disputed { border: 1.5px solid rgba(255,152,0,.4); background: rgba(255,152,0,.04); }
+    .activity-badge.disputed-badge { background: rgba(255,152,0,.15); color: #ffa726; font-size: 11px; }
+
+    /* ════════ STREAK BADGE ════════ */
+    .streak-badge {
+      font-size: 11px; font-weight: 700; color: #ffa726;
+      background: rgba(255,167,38,.12); border-radius: 20px;
+      padding: 3px 10px; white-space: nowrap; text-align: center;
+    }
+
+    /* ════════ ADMIN PIN MODAL ════════ */
+    .pin-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,.85);
+      z-index: 999; align-items: center; justify-content: center; padding: 20px;
+    }
+    .pin-overlay.open { display: flex; }
+    .pin-card {
+      background: var(--surface); border-radius: 28px; padding: 32px 24px;
+      width: 100%; max-width: 320px; text-align: center;
+      box-shadow: 0 0 60px rgba(124,77,255,.25);
+      border: 1px solid rgba(124,77,255,.2);
+    }
+    .pin-icon  { font-size: 48px; margin-bottom: 10px; }
+    .pin-title { font-size: 22px; font-weight: 900; margin-bottom: 4px; }
+    .pin-sub   { font-size: 14px; color: var(--muted); margin-bottom: 20px; }
+    .pin-dots-row { display: flex; justify-content: center; gap: 14px; margin-bottom: 20px; }
+    .pin-dot   { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--purple); background: transparent; transition: background .12s; }
+    .pin-dot.filled { background: var(--purple); }
+    .pin-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }
+    .pin-key {
+      padding: 16px; border: none; border-radius: 16px;
+      background: var(--surface2); color: var(--text);
+      font-size: 20px; font-weight: 700; cursor: pointer;
+      transition: background .1s, transform .1s; -webkit-appearance: none;
+    }
+    .pin-key:active { background: var(--purple); transform: scale(.93); }
+    .pin-key.del  { color: var(--muted); font-size: 16px; }
+    .pin-key.empty { background: transparent; pointer-events: none; }
+    .pin-error { font-size: 13px; color: #ff6b6b; min-height: 20px; margin-bottom: 10px; }
+    .pin-cancel {
+      width: 100%; padding: 13px; border: none; border-radius: 14px;
+      background: var(--surface2); color: var(--muted);
+      font-size: 14px; font-weight: 600; cursor: pointer; -webkit-appearance: none;
+    }
+
+    /* ════════ PUSH NOTIFICATION BANNER ════════ */
+    .push-banner {
+      background: rgba(124,77,255,.1); border: 1px solid rgba(124,77,255,.22);
+      border-radius: 16px; padding: 13px 14px; margin: 12px 14px 0;
+      display: none; align-items: center; gap: 12px;
+    }
+    .push-banner.visible { display: flex; }
+    .push-banner-icon { font-size: 22px; flex-shrink: 0; }
+    .push-banner-text { flex: 1; font-size: 13px; color: var(--muted); line-height: 1.35; }
+    .push-banner-text strong { color: var(--text); display: block; margin-bottom: 2px; }
+    .push-btn-enable {
+      padding: 8px 14px; border: none; border-radius: 10px;
+      background: var(--purple); color: #fff;
+      font-size: 12px; font-weight: 700; cursor: pointer; flex-shrink: 0;
+      -webkit-appearance: none;
+    }
+    .push-btn-dismiss {
+      padding: 6px 8px; border: none; background: none; color: var(--muted);
+      font-size: 18px; cursor: pointer; flex-shrink: 0; -webkit-appearance: none;
+    }
   </style>
 </head>
 <body>
@@ -573,6 +647,16 @@
     <div class="days-left-bar" id="days-left-bar">
       <span class="days-left-text" id="days-left-text">—</span>
       <div class="days-left-track"><div class="days-left-fill" id="days-left-fill" style="width:0%"></div></div>
+    </div>
+    <!-- Push notification permission banner -->
+    <div id="push-banner" class="push-banner">
+      <div class="push-banner-icon">🔔</div>
+      <div class="push-banner-text">
+        <strong>Get notified when you're charged!</strong>
+        Know the moment someone logs a swear for you
+      </div>
+      <button class="push-btn-enable" onclick="requestNotificationPermission(true)">Enable</button>
+      <button class="push-btn-dismiss" onclick="dismissPushBanner()">×</button>
     </div>
     <div class="grid" id="kids-grid"></div>
     <div class="section">
@@ -726,6 +810,37 @@
     </div>
   </div>
 
+  <!-- ═══════════ ADMIN PIN MODAL ═══════════ -->
+  <div id="pin-overlay" class="pin-overlay">
+    <div class="pin-card">
+      <div class="pin-icon">🔐</div>
+      <div class="pin-title">Admin Access</div>
+      <div class="pin-sub">Enter your 4-digit PIN</div>
+      <div class="pin-dots-row">
+        <div class="pin-dot" id="pd0"></div>
+        <div class="pin-dot" id="pd1"></div>
+        <div class="pin-dot" id="pd2"></div>
+        <div class="pin-dot" id="pd3"></div>
+      </div>
+      <div class="pin-keypad">
+        <button class="pin-key" onclick="pinKey('1')">1</button>
+        <button class="pin-key" onclick="pinKey('2')">2</button>
+        <button class="pin-key" onclick="pinKey('3')">3</button>
+        <button class="pin-key" onclick="pinKey('4')">4</button>
+        <button class="pin-key" onclick="pinKey('5')">5</button>
+        <button class="pin-key" onclick="pinKey('6')">6</button>
+        <button class="pin-key" onclick="pinKey('7')">7</button>
+        <button class="pin-key" onclick="pinKey('8')">8</button>
+        <button class="pin-key" onclick="pinKey('9')">9</button>
+        <div class="pin-key empty"></div>
+        <button class="pin-key" onclick="pinKey('0')">0</button>
+        <button class="pin-key del" onclick="pinBackspace()">⌫</button>
+      </div>
+      <div class="pin-error" id="pin-error"></div>
+      <button class="pin-cancel" onclick="closePinModal()">Cancel</button>
+    </div>
+  </div>
+
   <div class="overlay" id="overlay" onclick="handleOverlayClick(event)">
     <div class="modal">
       <div class="modal-sticky">
@@ -748,6 +863,8 @@
   // ══════════════════════════════════════════════════════
   const FB_CONFIG_KEY = 'swearjar2-firebase';
   let fbDb = null, fbConnected = false, fbFirstLoadDone = false, _fbSyncTimeout = null;
+  let _fbInitialized = false; // guard against double-registration
+  const _fbListeners = {};    // path → handler refs for .off() cleanup
 
   // Built-in config — every device connects automatically, no paste needed.
   // Admin can override via Settings → Firebase Sync if needed.
@@ -812,17 +929,28 @@
     PAY_INFO  = Object.fromEntries(settings.map(s => [s.name, s.paymentInfo ?? '']));
   }
 
+  function cleanupFbListeners() {
+    if (!fbDb) return;
+    Object.entries(_fbListeners).forEach(([path, handler]) => {
+      try { fbDb.ref(path).off('value', handler); } catch(e) {}
+    });
+    Object.keys(_fbListeners).forEach(k => delete _fbListeners[k]);
+  }
+
   function initFirebase(config) {
+    // Guard: only register listeners once per page load
+    if (_fbInitialized) return true;
+
     try {
       const existingApps = typeof firebase !== 'undefined' ? firebase.apps : [];
       const app = existingApps.length ? existingApps[0] : firebase.initializeApp(config);
       fbDb = firebase.database(app);
+      _fbInitialized = true;
 
-      // Connection health
-      fbDb.ref('.info/connected').on('value', snap => {
-        fbConnected = !!snap.val();
-        updateDbStatus();
-      });
+      // Connection health listener
+      const connHandler = snap => { fbConnected = !!snap.val(); updateDbStatus(); };
+      fbDb.ref('.info/connected').on('value', connHandler);
+      _fbListeners['.info/connected'] = connHandler;
 
       // Fallback: hide overlay after 8s if Firebase never responds
       _fbSyncTimeout = setTimeout(() => {
@@ -834,7 +962,7 @@
       }, 8000);
 
       // Settings listener
-      fbDb.ref('/swearjar/jarSettings').on('value', snap => {
+      const settingsHandler = snap => {
         const raw = snap.val();
         if (raw) {
           const ns = fbToArray(raw).map(x => ({ paymentInfo:'', ...x })).filter(x => x.name);
@@ -844,10 +972,12 @@
             syncUsersWithJar();
           }
         }
-      });
+      };
+      fbDb.ref('/swearjar/jarSettings').on('value', settingsHandler);
+      _fbListeners['/swearjar/jarSettings'] = settingsHandler;
 
       // App users listener
-      fbDb.ref('/swearjar/appUsers').on('value', snap => {
+      const usersHandler = snap => {
         const raw = snap.val();
         if (raw) {
           const nu = fbToArray(raw).filter(x => x && x.name);
@@ -857,10 +987,12 @@
           if (loginEl && !loginEl.classList.contains('hidden')) renderLoginScreen();
           if (document.getElementById('view-settings').classList.contains('active')) renderAppUsers();
         }
-      });
+      };
+      fbDb.ref('/swearjar/appUsers').on('value', usersHandler);
+      _fbListeners['/swearjar/appUsers'] = usersHandler;
 
       // Game state listener — primary driver
-      fbDb.ref('/swearjar/gameState').on('value', snap => {
+      const gameStateHandler = snap => {
         const raw = snap.val();
         if (raw) {
           const incoming = {
@@ -872,6 +1004,8 @@
           incoming.monthlyResults.forEach(r => {
             if (!r.winners && r.winner) { r.winners = [r.winner]; delete r.winner; }
           });
+          // Check for new charges before overwriting state
+          if (fbFirstLoadDone) checkForNewCharges(incoming.history);
           state = incoming;
           localStorage.setItem('swearjar2', JSON.stringify(state));
         } else if (!fbFirstLoadDone) {
@@ -882,17 +1016,25 @@
           fbFirstLoadDone = true;
           clearTimeout(_fbSyncTimeout);
           hideLoadingOverlay();
+          // Set baseline timestamp so first-load doesn't trigger notifications
+          const firstReal = (state.history || []).find(e => e.type !== 'deletion');
+          if (firstReal) _lastNotifTs = firstReal.ts;
+          // Init admin PIN hash in background
+          loadAdminPinHash();
         }
         render();
         const activeTab = document.querySelector('.nav-tab.active')?.id?.replace('tab-','');
         if (activeTab === 'history') renderHistory();
         if (activeTab === 'reports') renderReports();
         checkMonthRollover();
-      });
+      };
+      fbDb.ref('/swearjar/gameState').on('value', gameStateHandler);
+      _fbListeners['/swearjar/gameState'] = gameStateHandler;
 
       return true;
     } catch(e) {
       console.error('Firebase init failed:', e);
+      _fbInitialized = false; // allow retry
       fbFirstLoadDone = true;
       clearTimeout(_fbSyncTimeout);
       hideLoadingOverlay();
@@ -1024,6 +1166,226 @@
     save();
     render();
     toast(`🗑️ Deleted ${kid}'s entry`);
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  DISPUTE FLAG
+  // ══════════════════════════════════════════════════════
+  function disputeActivity(idx) {
+    const entry = state.history[idx];
+    if (!entry || entry.type === 'deletion') { toast('⛔ Cannot dispute this entry'); return; }
+    if (entry.kid !== currentUser) { toast('⛔ You can only dispute your own charges'); return; }
+    if (entry.disputed) { toast('⚠️ Already flagged as disputed'); return; }
+    entry.disputed = true;
+    entry.disputedAt = new Date().toISOString();
+    entry.disputedBy = currentUser;
+    save();
+    render();
+    toast('🚩 Flagged as disputed — a parent will review it');
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  ADMIN PIN  (SHA-256, stored in Firebase)
+  // ══════════════════════════════════════════════════════
+  const DEFAULT_ADMIN_PIN = '0379';
+  let _adminPinHash = null;
+  let _pinBuffer    = '';
+
+  async function sha256(str) {
+    const data = new TextEncoder().encode(str);
+    const hash = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+
+  async function loadAdminPinHash() {
+    if (_adminPinHash) return _adminPinHash;
+    if (fbDb) {
+      try {
+        const snap = await fbDb.ref('/swearjar/adminPin').once('value');
+        if (snap.val()) { _adminPinHash = snap.val(); return _adminPinHash; }
+      } catch(e) {}
+    }
+    // Compute default and persist to Firebase
+    _adminPinHash = await sha256(DEFAULT_ADMIN_PIN);
+    if (fbDb) {
+      try { fbDb.ref('/swearjar/adminPin').set(_adminPinHash); } catch(e) {}
+    }
+    return _adminPinHash;
+  }
+
+  function showPinModal() {
+    _pinBuffer = '';
+    updatePinDots();
+    document.getElementById('pin-error').textContent = '';
+    document.getElementById('pin-overlay').classList.add('open');
+    loadAdminPinHash(); // pre-load hash
+  }
+
+  function closePinModal() {
+    _pinBuffer = '';
+    updatePinDots();
+    document.getElementById('pin-overlay').classList.remove('open');
+  }
+
+  function pinKey(digit) {
+    if (_pinBuffer.length >= 4) return;
+    _pinBuffer += digit;
+    updatePinDots();
+    document.getElementById('pin-error').textContent = '';
+    if (_pinBuffer.length === 4) submitPin();
+  }
+
+  function pinBackspace() {
+    _pinBuffer = _pinBuffer.slice(0, -1);
+    updatePinDots();
+  }
+
+  function updatePinDots() {
+    for (let i = 0; i < 4; i++) {
+      const dot = document.getElementById(`pd${i}`);
+      if (dot) dot.classList.toggle('filled', i < _pinBuffer.length);
+    }
+  }
+
+  async function submitPin() {
+    const hash   = await sha256(_pinBuffer);
+    const stored = await loadAdminPinHash();
+    if (hash === stored) {
+      closePinModal();
+      loginAs('admin');
+    } else {
+      document.getElementById('pin-error').textContent = '❌ Incorrect PIN — try again';
+      _pinBuffer = '';
+      updatePinDots();
+    }
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  STREAK TRACKING
+  // ══════════════════════════════════════════════════════
+  function getStreak(kid) {
+    // Returns consecutive days with zero swears, ending today (EST)
+    const estNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    const pad = n => String(n).padStart(2,'0');
+    const todayStr = `${estNow.getFullYear()}-${pad(estNow.getMonth()+1)}-${pad(estNow.getDate())}`;
+
+    // Collect all days this kid swore
+    const swearDays = new Set();
+    (state.history || []).forEach(entry => {
+      if (entry.type === 'deletion' || entry.kid !== kid || !entry.ts) return;
+      swearDays.add(entry.ts.split('T')[0]);
+    });
+
+    // If they swore today, streak is 0
+    if (swearDays.has(todayStr)) return 0;
+
+    // Count backwards from yesterday
+    let streak = 0;
+    const d = new Date(estNow);
+    d.setDate(d.getDate() - 1);
+    for (let i = 0; i < 365; i++) {
+      const dStr = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+      if (swearDays.has(dStr)) break;
+      streak++;
+      d.setDate(d.getDate() - 1);
+      if (streak >= 30) break; // cap at 30 for display
+    }
+    return streak;
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  PUSH NOTIFICATIONS  (Web Notification API, foreground)
+  // ══════════════════════════════════════════════════════
+  let _lastNotifTs = null;
+
+  async function requestNotificationPermission(fromBanner) {
+    if (!('Notification' in window)) {
+      if (fromBanner) toast('Notifications not supported on this browser/device');
+      return;
+    }
+    if (Notification.permission === 'granted') {
+      hidePushBanner();
+      if (fromBanner) toast('🔔 Notifications already enabled!');
+      return;
+    }
+    if (Notification.permission === 'denied') {
+      if (fromBanner) toast('Blocked — enable in device Settings → Safari → Notifications');
+      return;
+    }
+    try {
+      const perm = await Notification.requestPermission();
+      if (perm === 'granted') {
+        hidePushBanner();
+        toast('🔔 Notifications enabled!');
+        // Store token for future FCM integration
+        _storeFcmToken();
+      } else {
+        if (fromBanner) toast('Notifications not enabled');
+      }
+    } catch(e) {
+      if (fromBanner) toast('Could not request notification permission');
+    }
+  }
+
+  function _storeFcmToken() {
+    // Placeholder: store that this user has notifications enabled in Firebase
+    // This foundation supports future FCM background push via Firebase Functions
+    if (!fbDb || !currentUser) return;
+    try {
+      fbDb.ref(`/swearjar/notifUsers/${currentUser.toLowerCase()}`).set({
+        name: currentUser,
+        notifEnabled: true,
+        updatedAt: new Date().toISOString()
+      });
+    } catch(e) {}
+  }
+
+  function showPushBannerIfNeeded() {
+    if (!currentUser || !KIDS.includes(currentUser)) return; // only jar kids
+    if (localStorage.getItem('swearjar2-push-dismissed') === '1') return;
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'default') return; // already decided
+    const banner = document.getElementById('push-banner');
+    if (banner) banner.classList.add('visible');
+  }
+
+  function hidePushBanner() {
+    const banner = document.getElementById('push-banner');
+    if (banner) banner.classList.remove('visible');
+  }
+
+  function dismissPushBanner() {
+    hidePushBanner();
+    localStorage.setItem('swearjar2-push-dismissed', '1');
+  }
+
+  function checkForNewCharges(newHistory) {
+    if (!currentUser || !KIDS.includes(currentUser)) return;
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+
+    const prevTs = _lastNotifTs;
+    // Track the most recent real entry timestamp
+    const firstReal = newHistory.find(e => e.type !== 'deletion');
+    if (firstReal) _lastNotifTs = firstReal.ts;
+
+    if (!prevTs) return; // first load — don't fire on initial sync
+
+    // Walk new entries (at the front, newer than prevTs)
+    for (const entry of newHistory) {
+      if (entry.type === 'deletion') continue;
+      if (!entry.ts || entry.ts <= prevTs) break; // reached already-seen entries
+      if (entry.kid === currentUser && entry.addedBy !== currentUser) {
+        try {
+          const notif = new Notification('🤬 Swear Jar!', {
+            body: `${entry.addedBy || 'Someone'} logged a $1 charge for ${currentUser}`,
+            icon: '/swear-jar/icon-192.png',
+            badge: '/swear-jar/icon-192.png',
+            tag: 'swear-charge',
+          });
+          notif.onclick = () => { window.focus(); notif.close(); };
+        } catch(e) {}
+      }
+    }
   }
 
   // ══════════════════════════════════════════════════════
@@ -1320,6 +1682,19 @@
           <div style="margin-left:auto; width:10px; height:10px; border-radius:50%; background:${color}; flex-shrink:0"></div>
         </button>`;
     }).join('');
+    // Admin button — always at bottom, PIN protected
+    grid.insertAdjacentHTML('beforeend', `
+      <button class="login-btn" style="border-color:#7c4dff22;margin-top:4px"
+        onclick="showPinModal()"
+        onmouseover="this.style.borderColor='#7c4dff'"
+        onmouseout="this.style.borderColor='#7c4dff22'">
+        <div class="login-btn-emoji">🔐</div>
+        <div class="login-btn-info">
+          <div class="login-btn-name">Admin</div>
+          <div class="login-btn-sub" style="color:#7c4dff">PIN required</div>
+        </div>
+        <div style="margin-left:auto; width:10px; height:10px; border-radius:50%; background:#7c4dff; flex-shrink:0"></div>
+      </button>`);
     document.getElementById('login-custom-input').value = '';
   }
 
@@ -1327,6 +1702,10 @@
     // Persist identity across the reload that follows
     currentUser = name;
     sessionStorage.setItem('swearjar2-user', name);
+    // Request notification permission for jar kids (non-blocking)
+    if (KIDS.includes(name) && 'Notification' in window && Notification.permission === 'granted') {
+      _storeFcmToken(); // re-affirm token
+    }
 
     // Show feedback before the reload
     document.getElementById('login-screen').innerHTML = `
@@ -1520,6 +1899,7 @@
       const {amount=0,swears=0}=state.kids[kid]??{};
       const isLeading=pot>0&&winners.includes(kid), isWorst=worst.includes(kid);
       const cls=['kid-card',isLeading?'leading':'',isWorst?'worst':''].filter(Boolean).join(' ');
+      const streak = getStreak(kid);
       return `
         <div class="${cls}" data-kid="${kid}" style="--c:${COLORS[kid]??'#888'}">
           <div class="kid-badmouth">🤬</div>
@@ -1528,6 +1908,7 @@
           <div class="kid-name">${escHtml(kid)}</div>
           <div class="kid-amount">$${amount}</div>
           <div class="kid-count">${swears} swear${swears!==1?'s':''}</div>
+          ${streak >= 3 ? `<div class="streak-badge">🔥 ${streak >= 30 ? '30+' : streak}-day streak!</div>` : ''}
           <button class="swear-btn" onclick="addSwear('${escHtml(kid)}')">🤬 +$1</button>
         </div>`;
     }).join('');
@@ -1554,19 +1935,24 @@
             </div>`;
         }
         const {kid,ts,addedBy} = entry;
-        const canDel = canDeleteEntry(entry);
+        const canDel     = canDeleteEntry(entry);
+        const canDispute = entry.kid === currentUser && !entry.disputed && entry.type !== 'deletion';
+        const isDisputed = !!entry.disputed;
         return `
-          <div class="activity-row" style="--c:${COLORS[kid]??'#888'}">
+          <div class="activity-row${isDisputed ? ' disputed' : ''}" style="--c:${COLORS[kid]??'#888'}">
             <div class="activity-left">
               <div class="activity-dot"></div>
               <div class="activity-info">
                 <div class="activity-name">${escHtml(kid)}</div>
-                ${addedBy ? `<div class="activity-by">recorded by ${escHtml(addedBy)}</div>` : ''}
+                ${addedBy ? `<div class="activity-by">recorded by ${escHtml(addedBy)}${isDisputed ? ' · <span style="color:#ffa726">🚩 disputed</span>' : ''}</div>` : ''}
               </div>
             </div>
             <div class="activity-right">
               <div class="activity-time">${relativeTime(ts)}</div>
-              <div class="activity-badge">+$1</div>
+              ${isDisputed
+                ? `<div class="activity-badge disputed-badge">🚩 Disputed</div>`
+                : `<div class="activity-badge">+$1</div>`}
+              ${canDispute ? `<button class="activity-dispute-btn" onclick="disputeActivity(${idx})" title="Flag charge as disputed">🚩</button>` : ''}
               ${canDel ? `<button class="activity-del-btn" onclick="deleteActivity(${idx})" title="Delete this entry">🗑️</button>` : ''}
             </div>
           </div>`;
@@ -1840,6 +2226,9 @@
   }
 
   render();
+
+  // Show push notification banner if needed (jar kids only)
+  if (currentUser) showPushBannerIfNeeded();
 
   // Bootstrap Firebase (only after user is identified — login does a reload so
   // by the time we reach here sessionStorage is already set if logged in)
