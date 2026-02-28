@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Swear Jar" />
+  <meta name="theme-color" content="#0d0d1a" />
+  <link rel="manifest" href="manifest.json" />
+  <title>Swear Jar 🤐</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #0d0d1a;
+      --surface:  #16172a;
+      --surface2: #1e2038;
+      --border:   rgba(255,255,255,0.07);
+      --text:     #ffffff;
+      --muted:    rgba(255,255,255,0.45);
+      --delaney:  #e91e8c;
+      --hadley:   #00c2e0;
+      --emerson:  #56c278;
+      --grant:    #ffa726;
+      --purple:   #7c4dff;
+      --pink:     #e91e8c;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      max-width: 480px;
+      margin: 0 auto;
+      padding-bottom: calc(72px + env(safe-area-inset-bottom));
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 16px 14px;
+      position: sticky; top: 0; z-index: 50;
+    }
+    .header-row {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .app-title { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+    .month-chip {
+      background: var(--surface2); border-radius: 20px; padding: 5px 13px;
+      font-size: 12px; color: var(--muted); font-weight: 600;
+    }
+    .pot-card {
+      background: linear-gradient(135deg, var(--purple), var(--pink));
+      border-radius: 18px; padding: 14px 18px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .pot-left { display: flex; flex-direction: column; gap: 2px; }
+    .pot-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; opacity: .75; }
+    .pot-amount { font-size: 36px; font-weight: 900; line-height: 1; }
+    .pot-right { text-align: right; }
+    .pot-leader-label { font-size: 11px; opacity: .75; text-transform: uppercase; letter-spacing: 1px; }
+    .pot-leader-name { font-size: 15px; font-weight: 800; margin-top: 2px; }
+
+    /* ── GRID ── */
+    .grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 12px; padding: 14px;
+    }
+
+    /* ── KID CARD ── */
+    .kid-card {
+      background: var(--surface);
+      border-radius: 22px;
+      padding: 18px 14px 14px;
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      position: relative; overflow: hidden;
+      border: 2px solid transparent;
+      transition: border-color .2s;
+    }
+    .kid-card.leading { border-color: gold; }
+    .kid-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+      background: var(--c);
+    }
+    .kid-crown {
+      position: absolute; top: 8px; right: 10px;
+      font-size: 16px; display: none;
+    }
+    .kid-card.leading .kid-crown { display: block; }
+    .kid-avatar {
+      width: 52px; height: 52px; border-radius: 50%;
+      background: var(--c); opacity: .18;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px; position: relative;
+    }
+    .kid-avatar-emoji {
+      position: absolute; font-size: 26px; opacity: 1;
+    }
+    .kid-name { font-size: 17px; font-weight: 700; }
+    .kid-amount { font-size: 34px; font-weight: 900; color: var(--c); line-height: 1; }
+    .kid-count { font-size: 11px; color: var(--muted); }
+    .swear-btn {
+      margin-top: 4px; width: 100%; padding: 13px 8px;
+      background: var(--c); border: none; border-radius: 14px;
+      color: #fff; font-size: 15px; font-weight: 700;
+      cursor: pointer; transition: transform .1s, filter .1s;
+      -webkit-appearance: none;
+    }
+    .swear-btn:active { transform: scale(.93); filter: brightness(.85); }
+
+    /* ── ACTIONS ── */
+    .actions {
+      padding: 0 14px 14px;
+      display: flex; gap: 10px;
+    }
+    .btn {
+      flex: 1; padding: 14px 10px; border: none; border-radius: 15px;
+      font-size: 14px; font-weight: 700; cursor: pointer;
+      transition: transform .1s, opacity .1s; -webkit-appearance: none;
+    }
+    .btn:active { transform: scale(.96); opacity: .8; }
+    .btn-ghost { background: var(--surface2); color: var(--muted); }
+    .btn-grad  { background: linear-gradient(135deg, var(--purple), var(--pink)); color: #fff; }
+
+    /* ── ACTIVITY ── */
+    .section { padding: 0 14px 14px; }
+    .section-header {
+      font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px;
+      color: var(--muted); margin-bottom: 10px;
+    }
+    .activity-list { display: flex; flex-direction: column; gap: 8px; }
+    .activity-row {
+      background: var(--surface); border-radius: 13px;
+      padding: 11px 14px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .activity-left { display: flex; align-items: center; gap: 10px; }
+    .activity-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
+    .activity-name { font-weight: 600; font-size: 14px; }
+    .activity-right { display: flex; align-items: center; gap: 12px; }
+    .activity-time { font-size: 11px; color: var(--muted); }
+    .activity-badge {
+      font-size: 12px; font-weight: 700;
+      background: rgba(233,30,140,.15); color: var(--pink);
+      border-radius: 8px; padding: 2px 8px;
+    }
+    .empty { text-align: center; padding: 30px 0; color: var(--muted); }
+    .empty-icon { font-size: 40px; margin-bottom: 8px; }
+
+    /* ── HISTORY VIEW ── */
+    .history-list { padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+    .hist-card {
+      background: var(--surface); border-radius: 20px; padding: 18px;
+    }
+    .hist-month { font-size: 13px; color: var(--muted); font-weight: 600; margin-bottom: 12px; }
+    .hist-winner-box {
+      background: linear-gradient(135deg, rgba(124,77,255,.15), rgba(233,30,140,.15));
+      border: 1px solid rgba(124,77,255,.3);
+      border-radius: 14px; padding: 14px; text-align: center; margin-bottom: 12px;
+    }
+    .hist-trophy { font-size: 28px; margin-bottom: 4px; }
+    .hist-winner-name { font-size: 20px; font-weight: 900; }
+    .hist-prize { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .hist-rows { display: flex; flex-direction: column; gap: 6px; }
+    .hist-row {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 13px;
+    }
+    .hist-row-left { display: flex; align-items: center; gap: 8px; }
+    .hist-row-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .hist-row-name { font-weight: 600; }
+    .hist-row-amount { color: var(--muted); }
+
+    /* ── BOTTOM NAV ── */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 100%; max-width: 480px;
+      background: var(--surface); border-top: 1px solid var(--border);
+      display: flex;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .nav-tab {
+      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+      padding: 10px 8px; border: none; background: none;
+      color: var(--muted); font-size: 11px; font-weight: 600; cursor: pointer;
+      transition: color .2s;
+    }
+    .nav-tab.active { color: var(--purple); }
+    .nav-icon { font-size: 22px; }
+
+    /* ── VIEW TOGGLE ── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ── MODAL ── */
+    .overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.75); z-index: 200;
+      align-items: flex-end; justify-content: center;
+    }
+    .overlay.open { display: flex; }
+    .modal {
+      background: var(--surface); border-radius: 28px 28px 0 0;
+      padding: 24px 18px calc(24px + env(safe-area-inset-bottom));
+      width: 100%; max-width: 480px;
+    }
+    .modal-handle {
+      width: 40px; height: 4px; background: var(--surface2);
+      border-radius: 4px; margin: 0 auto 18px;
+    }
+    .modal-title { font-size: 22px; font-weight: 900; text-align: center; margin-bottom: 6px; }
+    .modal-sub { font-size: 14px; color: var(--muted); text-align: center; margin-bottom: 18px; }
+    .modal-winner-box {
+      background: linear-gradient(135deg, rgba(124,77,255,.2), rgba(233,30,140,.2));
+      border-radius: 18px; padding: 18px; text-align: center; margin-bottom: 16px;
+    }
+    .modal-trophy { font-size: 44px; margin-bottom: 6px; }
+    .modal-winner-name { font-size: 28px; font-weight: 900; }
+    .modal-prize { font-size: 16px; color: rgba(255,255,255,.7); margin-top: 4px; }
+    .modal-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+    .modal-row {
+      background: var(--surface2); border-radius: 13px;
+      padding: 13px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .modal-row-left { display: flex; align-items: center; gap: 10px; font-size: 15px; }
+    .modal-row-right { font-size: 14px; color: var(--muted); }
+    .modal-confirm {
+      width: 100%; padding: 16px; border: none; border-radius: 16px;
+      background: linear-gradient(135deg, var(--purple), var(--pink));
+      color: #fff; font-size: 16px; font-weight: 800; cursor: pointer;
+      margin-bottom: 10px;
+    }
+    .modal-cancel {
+      width: 100%; padding: 14px; border: none; border-radius: 16px;
+      background: var(--surface2); color: var(--muted); font-size: 15px;
+      font-weight: 600; cursor: pointer;
+    }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed; top: 16px; left: 50%; transform: translateX(-50%) translateY(-80px);
+      background: rgba(255,255,255,.12); backdrop-filter: blur(20px);
+      color: #fff; padding: 10px 20px; border-radius: 100px;
+      font-size: 14px; font-weight: 600; z-index: 999;
+      border: 1px solid rgba(255,255,255,.15);
+      transition: transform .3s cubic-bezier(.34,1.56,.64,1);
+      white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ── PULSE ANIMATION ── */
+    @keyframes pulse {
+      0%   { transform: scale(1); }
+      50%  { transform: scale(1.06); }
+      100% { transform: scale(1); }
+    }
+    .pulse { animation: pulse .2s ease; }
+  </style>
+</head>
+<body>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ════════════════════ TRACKER VIEW ════════════════════ -->
+  <div class="view active" id="view-tracker">
+
+    <div class="header">
+      <div class="header-row">
+        <div class="app-title">🤐 Swear Jar</div>
+        <div class="month-chip" id="month-chip">—</div>
+      </div>
+      <div class="pot-card">
+        <div class="pot-left">
+          <div class="pot-label">💰 Month's Pot</div>
+          <div class="pot-amount" id="pot-amount">$0</div>
+        </div>
+        <div class="pot-right">
+          <div class="pot-leader-label">👑 Leading</div>
+          <div class="pot-leader-name" id="pot-leader">—</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid" id="kids-grid"></div>
+
+    <div class="actions">
+      <button class="btn btn-ghost" onclick="undoLast()">↩ Undo</button>
+      <button class="btn btn-grad"  onclick="openEndMonth()">🏆 End Month</button>
+    </div>
+
+    <div class="section">
+      <div class="section-header">Recent Activity</div>
+      <div class="activity-list" id="activity-list"></div>
+    </div>
+
+  </div>
+
+  <!-- ════════════════════ HISTORY VIEW ════════════════════ -->
+  <div class="view" id="view-history">
+
+    <div class="header">
+      <div class="header-row">
+        <div class="app-title">📊 History</div>
+      </div>
+    </div>
+
+    <div class="history-list" id="history-list"></div>
+
+  </div>
+
+  <!-- ════════════════════ BOTTOM NAV ════════════════════ -->
+  <div class="bottom-nav">
+    <button class="nav-tab active" id="tab-tracker" onclick="switchView('tracker')">
+      <span class="nav-icon">🎯</span><span>Tracker</span>
+    </button>
+    <button class="nav-tab" id="tab-history" onclick="switchView('history')">
+      <span class="nav-icon">🏅</span><span>History</span>
+    </button>
+  </div>
+
+  <!-- ════════════════════ END-MONTH MODAL ════════════════════ -->
+  <div class="overlay" id="overlay" onclick="handleOverlayClick(event)">
+    <div class="modal" id="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-title">End the Month? 🏆</div>
+      <div class="modal-sub" id="modal-sub"></div>
+      <div class="modal-winner-box" id="modal-winner-box"></div>
+      <div class="modal-rows" id="modal-rows"></div>
+      <button class="modal-confirm" onclick="confirmEndMonth()">Confirm & Reset Month</button>
+      <button class="modal-cancel"  onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+
+  <script>
+  // ══════════════════════════════════════════
+  //  CONFIG
+  // ══════════════════════════════════════════
+  const KIDS = ['Delaney', 'Hadley', 'Emerson', 'Grant'];
+  const COLORS = {
+    Delaney: 'var(--delaney)',
+    Hadley:  'var(--hadley)',
+    Emerson: 'var(--emerson)',
+    Grant:   'var(--grant)',
+  };
+  const COLOR_HEX = {
+    Delaney: '#e91e8c',
+    Hadley:  '#00c2e0',
+    Emerson: '#56c278',
+    Grant:   '#ffa726',
+  };
+  const EMOJI = {
+    Delaney: '👧',
+    Hadley:  '🧒',
+    Emerson: '👦',
+    Grant:   '🧑',
+  };
+  const MONTHS = ['January','February','March','April','May','June',
+                  'July','August','September','October','November','December'];
+
+  // ══════════════════════════════════════════
+  //  STATE
+  // ══════════════════════════════════════════
+  function defaultState() {
+    const kids = {};
+    KIDS.forEach(k => { kids[k] = { amount: 0, swears: 0 }; });
+    return { kids, history: [], monthlyResults: [] };
+  }
+
+  function load() {
+    try { const s = localStorage.getItem('swearjar2'); if (s) return JSON.parse(s); } catch(e) {}
+    return defaultState();
+  }
+  function save() { localStorage.setItem('swearjar2', JSON.stringify(state)); }
+
+  let state = load();
+
+  // ══════════════════════════════════════════
+  //  HELPERS
+  // ══════════════════════════════════════════
+  function currentMonthKey() {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+  }
+  function formatMonthKey(key) {
+    const [y, m] = key.split('-');
+    return `${MONTHS[parseInt(m)-1]} ${y}`;
+  }
+  function totalPot() {
+    return Object.values(state.kids).reduce((s, k) => s + k.amount, 0);
+  }
+  function getWinners() {
+    // Kid(s) with the LEAST amount owed wins
+    const min = Math.min(...KIDS.map(k => state.kids[k].amount));
+    return KIDS.filter(k => state.kids[k].amount === min);
+  }
+  function relativeTime(iso) {
+    const diff = (Date.now() - new Date(iso)) / 1000;
+    if (diff < 60)   return 'just now';
+    if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
+    const d = new Date(iso);
+    return `${MONTHS[d.getMonth()].slice(0,3)} ${d.getDate()}`;
+  }
+
+  // ══════════════════════════════════════════
+  //  ACTIONS
+  // ══════════════════════════════════════════
+  function addSwear(kid) {
+    state.kids[kid].amount++;
+    state.kids[kid].swears++;
+    state.history.unshift({ kid, ts: new Date().toISOString() });
+    if (state.history.length > 200) state.history.length = 200;
+    save(); render();
+    toast(`${kid} owes $1 💸`);
+    // animate card
+    const card = document.querySelector(`[data-kid="${kid}"]`);
+    if (card) { card.classList.remove('pulse'); void card.offsetWidth; card.classList.add('pulse'); }
+  }
+
+  function undoLast() {
+    if (!state.history.length) { toast('Nothing to undo!'); return; }
+    const { kid } = state.history.shift();
+    state.kids[kid].amount = Math.max(0, state.kids[kid].amount - 1);
+    state.kids[kid].swears = Math.max(0, state.kids[kid].swears - 1);
+    save(); render();
+    toast(`Undid ${kid}'s swear ↩`);
+  }
+
+  function openEndMonth() {
+    const pot     = totalPot();
+    const winners = getWinners();
+    const sorted  = [...KIDS].sort((a,b) => state.kids[a].amount - state.kids[b].amount);
+
+    // subtitle
+    document.getElementById('modal-sub').textContent =
+      pot === 0
+        ? 'No swears this month — everyone wins! 🎉'
+        : winners.length > 1
+          ? `${winners.join(' & ')} are tied with the fewest swears!`
+          : `${winners[0]} had the fewest swears and wins the pot!`;
+
+    // winner box
+    const prize = winners.length > 1
+      ? `Each wins $${(pot / winners.length).toFixed(2)}`
+      : `Wins $${pot}!`;
+    document.getElementById('modal-winner-box').innerHTML = `
+      <div class="modal-trophy">${winners.length > 1 ? '🤝' : '🏆'}</div>
+      <div class="modal-winner-name" style="color:${COLOR_HEX[winners[0]]}">${winners.join(' & ')}</div>
+      <div class="modal-prize">${prize}</div>
+    `;
+
+    // kid rows
+    document.getElementById('modal-rows').innerHTML = sorted.map((kid, i) => `
+      <div class="modal-row">
+        <div class="modal-row-left">
+          <span>${i===0?'🥇':i===1?'🥈':i===2?'🥉':'4️⃣'}</span>
+          <span style="font-weight:700;color:${COLOR_HEX[kid]}">${kid}</span>
+        </div>
+        <div class="modal-row-right">${state.kids[kid].swears} swear${state.kids[kid].swears!==1?'s':''} = $${state.kids[kid].amount}</div>
+      </div>
+    `).join('');
+
+    document.getElementById('overlay').classList.add('open');
+  }
+
+  function confirmEndMonth() {
+    const pot     = totalPot();
+    const winners = getWinners();
+    const month   = currentMonthKey();
+
+    state.monthlyResults.unshift({
+      month, winners, pot,
+      kids: JSON.parse(JSON.stringify(state.kids)),
+    });
+
+    // reset
+    KIDS.forEach(k => { state.kids[k] = { amount: 0, swears: 0 }; });
+    state.history = [];
+    save(); closeModal(); render();
+    switchView('tracker');
+    toast(`${winners.join(' & ')} win${winners.length>1?'':'s'} $${pot}! 🏆`);
+  }
+
+  function closeModal() {
+    document.getElementById('overlay').classList.remove('open');
+  }
+  function handleOverlayClick(e) {
+    if (e.target === document.getElementById('overlay')) closeModal();
+  }
+
+  // ══════════════════════════════════════════
+  //  RENDER
+  // ══════════════════════════════════════════
+  function render() {
+    const pot     = totalPot();
+    const winners = getWinners();
+
+    // header
+    document.getElementById('month-chip').textContent = formatMonthKey(currentMonthKey());
+    document.getElementById('pot-amount').textContent  = `$${pot}`;
+    document.getElementById('pot-leader').textContent  = winners.join(' & ');
+
+    // kid cards
+    document.getElementById('kids-grid').innerHTML = KIDS.map(kid => {
+      const { amount, swears } = state.kids[kid];
+      const isLeading = winners.includes(kid);
+      return `
+        <div class="kid-card${isLeading ? ' leading' : ''}" data-kid="${kid}" style="--c:${COLORS[kid]}">
+          <div class="kid-crown">👑</div>
+          <div class="kid-avatar">
+            <span class="kid-avatar-emoji">${EMOJI[kid]}</span>
+          </div>
+          <div class="kid-name">${kid}</div>
+          <div class="kid-amount">$${amount}</div>
+          <div class="kid-count">${swears} swear${swears!==1?'s':''}</div>
+          <button class="swear-btn" onclick="addSwear('${kid}')">🤬 +$1</button>
+        </div>
+      `;
+    }).join('');
+
+    // activity
+    const recent = state.history.slice(0, 12);
+    const actEl  = document.getElementById('activity-list');
+    if (!recent.length) {
+      actEl.innerHTML = `<div class="empty"><div class="empty-icon">😇</div><div>No swears yet this month!</div></div>`;
+    } else {
+      actEl.innerHTML = recent.map(({ kid, ts }) => `
+        <div class="activity-row" style="--c:${COLORS[kid]}">
+          <div class="activity-left">
+            <div class="activity-dot"></div>
+            <div class="activity-name">${kid}</div>
+          </div>
+          <div class="activity-right">
+            <div class="activity-time">${relativeTime(ts)}</div>
+            <div class="activity-badge">+$1</div>
+          </div>
+        </div>
+      `).join('');
+    }
+  }
+
+  function renderHistory() {
+    const el = document.getElementById('history-list');
+    if (!state.monthlyResults.length) {
+      el.innerHTML = `<div class="empty" style="padding:40px 0"><div class="empty-icon">📋</div><div>No months completed yet</div><div style="font-size:13px;margin-top:6px;color:var(--muted)">End a month to see results here</div></div>`;
+      return;
+    }
+    el.innerHTML = state.monthlyResults.map(r => {
+      const sorted = [...KIDS].sort((a,b) => (r.kids[a]?.amount||0) - (r.kids[b]?.amount||0));
+      const prizeStr = r.winners?.length > 1
+        ? `Each won $${(r.pot / r.winners.length).toFixed(2)}`
+        : `Won $${r.pot}`;
+      const winnerName = (r.winners || [r.winner]).join(' & ');
+      const winnerColor = COLOR_HEX[(r.winners||[r.winner])[0]];
+      return `
+        <div class="hist-card">
+          <div class="hist-month">${formatMonthKey(r.month)}</div>
+          <div class="hist-winner-box">
+            <div class="hist-trophy">🏆</div>
+            <div class="hist-winner-name" style="color:${winnerColor}">${winnerName}</div>
+            <div class="hist-prize">${prizeStr}</div>
+          </div>
+          <div class="hist-rows">
+            ${sorted.map((kid,i) => `
+              <div class="hist-row">
+                <div class="hist-row-left">
+                  <div class="hist-row-dot" style="background:${COLOR_HEX[kid]}"></div>
+                  <span class="hist-row-name" style="color:${COLOR_HEX[kid]}">${kid}</span>
+                </div>
+                <div class="hist-row-amount">${r.kids[kid]?.swears||0} swears = $${r.kids[kid]?.amount||0}</div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ══════════════════════════════════════════
+  //  NAVIGATION
+  // ══════════════════════════════════════════
+  function switchView(v) {
+    document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+    document.getElementById(`view-${v}`).classList.add('active');
+    document.getElementById(`tab-${v}`).classList.add('active');
+    if (v === 'history') renderHistory();
+  }
+
+  // ══════════════════════════════════════════
+  //  TOAST
+  // ══════════════════════════════════════════
+  let _toastTimer;
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+  }
+
+  // ══════════════════════════════════════════
+  //  SERVICE WORKER
+  // ══════════════════════════════════════════
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+
+  // ══════════════════════════════════════════
+  //  INIT
+  // ══════════════════════════════════════════
+  render();
+  </script>
+</body>
+</html>
