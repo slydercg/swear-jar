@@ -537,8 +537,23 @@
   const FB_CONFIG_KEY = 'swearjar2-firebase';
   let fbDb = null, fbConnected = false, fbFirstLoadDone = false, _fbSyncTimeout = null;
 
+  // Built-in config — every device connects automatically, no paste needed.
+  // Admin can override via Settings → Firebase Sync if needed.
+  const BUILT_IN_FB_CONFIG = {
+    apiKey: "AIzaSyCGypt6brjLpMaahSe7z3wP_M-6ge1yDXM",
+    authDomain: "swear-jar-ef967.firebaseapp.com",
+    databaseURL: "https://swear-jar-ef967-default-rtdb.firebaseio.com",
+    projectId: "swear-jar-ef967",
+    storageBucket: "swear-jar-ef967.firebasestorage.app",
+    messagingSenderId: "1032163682260",
+    appId: "1:1032163682260:web:53275cad43bd8fb2cc1841",
+    measurementId: "G-C21VCCV4GB"
+  };
+
   function loadFbConfig() {
-    try { const s = localStorage.getItem(FB_CONFIG_KEY); return s ? JSON.parse(s) : null; } catch(e) { return null; }
+    // Use any admin-saved override first, otherwise fall back to the built-in config
+    try { const s = localStorage.getItem(FB_CONFIG_KEY); if (s) return JSON.parse(s); } catch(e) {}
+    return BUILT_IN_FB_CONFIG;
   }
   function saveFbConfig(cfg) { localStorage.setItem(FB_CONFIG_KEY, JSON.stringify(cfg)); }
 
@@ -1293,17 +1308,12 @@
 
   // Bootstrap Firebase (only after user is identified — login does a reload so
   // by the time we reach here sessionStorage is already set if logged in)
+  // Always connect to Firebase — config is now built into the app
   const _fbCfg = loadFbConfig();
-  if (_fbCfg && currentUser) {
+  if (currentUser) {
     showLoadingOverlay('Fetching the latest data ☁️');
-    initFirebase(_fbCfg);
-  } else if (_fbCfg) {
-    // Config exists but not logged in yet — init quietly so connection is ready
-    try { initFirebase(_fbCfg); } catch(e) {}
-  } else {
-    // No Firebase config — show local-only dot subtly
-    updateDbStatus();
   }
+  initFirebase(_fbCfg);
   </script>
 </body>
 </html>
