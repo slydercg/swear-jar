@@ -25,42 +25,99 @@
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      max-width: 480px;
-      margin: 0 auto;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh; max-width: 480px; margin: 0 auto;
       padding-bottom: calc(72px + env(safe-area-inset-bottom));
       -webkit-tap-highlight-color: transparent;
     }
 
-    /* ── HEADER ── */
-    .header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 16px 16px 14px;
-      position: sticky; top: 0; z-index: 50;
+    /* ════════ LOGIN SCREEN ════════ */
+    .login-screen {
+      position: fixed; inset: 0; z-index: 900;
+      background: var(--bg);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 28px 20px calc(28px + env(safe-area-inset-bottom));
+      overflow-y: auto;
     }
-    .header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .login-screen.hidden { display: none; }
+    .login-logo  { font-size: 64px; margin-bottom: 8px; text-align: center; }
+    .login-title { font-size: 30px; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 4px; }
+    .login-sub   { font-size: 15px; color: var(--muted); margin-bottom: 32px; text-align: center; }
+    .login-grid  { width: 100%; max-width: 400px; display: flex; flex-direction: column; gap: 10px; }
+    .login-btn {
+      display: flex; align-items: center; gap: 14px;
+      padding: 16px 18px; border: 2px solid var(--border);
+      border-radius: 18px; background: var(--surface);
+      color: var(--text); font-size: 17px; font-weight: 700;
+      cursor: pointer; transition: border-color .15s, transform .1s;
+      -webkit-appearance: none; width: 100%;
+    }
+    .login-btn:active { transform: scale(.97); }
+    .login-btn-emoji { font-size: 28px; flex-shrink: 0; }
+    .login-btn-info  { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; }
+    .login-btn-name  { font-size: 18px; font-weight: 800; }
+    .login-btn-sub   { font-size: 12px; font-weight: 500; opacity: .6; }
+    .login-custom-row {
+      display: flex; gap: 10px; margin-top: 4px;
+      width: 100%; max-width: 400px;
+    }
+    .login-custom-input {
+      flex: 1; background: var(--surface); border: 2px solid var(--border);
+      border-radius: 14px; padding: 14px 16px;
+      color: var(--text); font-size: 16px; font-weight: 600;
+      outline: none; -webkit-appearance: none;
+    }
+    .login-custom-input:focus { border-color: var(--purple); }
+    .login-custom-btn {
+      padding: 14px 18px; border: none; border-radius: 14px;
+      background: linear-gradient(135deg, var(--purple), var(--pink));
+      color: #fff; font-size: 15px; font-weight: 700;
+      cursor: pointer; white-space: nowrap; -webkit-appearance: none;
+    }
+    .login-divider {
+      width: 100%; max-width: 400px;
+      display: flex; align-items: center; gap: 12px;
+      margin: 4px 0;
+    }
+    .login-divider::before, .login-divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+    .login-divider-text { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+    /* ════════ HEADER ════════ */
+    .header {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 14px 16px 12px; position: sticky; top: 0; z-index: 50;
+    }
+    .header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
     .header-row-bare { display: flex; align-items: center; justify-content: space-between; }
-    .app-title { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
-    .month-chip { background: var(--surface2); border-radius: 20px; padding: 5px 13px; font-size: 12px; color: var(--muted); font-weight: 600; }
+    .header-meta { display: flex; align-items: center; gap: 8px; }
+    .app-title  { font-size: 21px; font-weight: 800; letter-spacing: -0.5px; }
+    .month-chip { background: var(--surface2); border-radius: 20px; padding: 4px 12px; font-size: 12px; color: var(--muted); font-weight: 600; }
+    .user-chip  {
+      display: flex; align-items: center; gap: 6px;
+      background: var(--surface2); border: none; border-radius: 20px;
+      padding: 4px 10px 4px 7px; font-size: 12px; font-weight: 700;
+      color: var(--text); cursor: pointer; transition: background .15s;
+    }
+    .user-chip:active { background: var(--border); }
+    .user-chip-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
     .pot-card {
       background: linear-gradient(135deg, var(--purple), var(--pink));
-      border-radius: 18px; padding: 14px 18px;
+      border-radius: 16px; padding: 13px 16px;
       display: flex; align-items: center; justify-content: space-between;
     }
     .pot-left { display: flex; flex-direction: column; gap: 2px; }
-    .pot-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; opacity: .75; }
-    .pot-amount { font-size: 36px; font-weight: 900; line-height: 1; }
-    .pot-right { text-align: right; }
-    .pot-leader-label { font-size: 11px; opacity: .75; text-transform: uppercase; letter-spacing: 1px; }
-    .pot-leader-name { font-size: 15px; font-weight: 800; margin-top: 2px; }
+    .pot-label  { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; opacity: .75; }
+    .pot-amount { font-size: 34px; font-weight: 900; line-height: 1; }
+    .pot-right  { text-align: right; }
+    .pot-leader-label { font-size: 10px; opacity: .75; text-transform: uppercase; letter-spacing: 1px; }
+    .pot-leader-name  { font-size: 14px; font-weight: 800; margin-top: 2px; }
 
-    /* ── GRID ── */
+    /* ════════ GRID ════════ */
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 14px; }
 
-    /* ── KID CARD ── */
+    /* ════════ KID CARD ════════ */
     .kid-card {
       background: var(--surface); border-radius: 22px;
       padding: 18px 14px 14px;
@@ -75,160 +132,137 @@
     .kid-badmouth { position: absolute; top: 8px; left: 10px;  font-size: 16px; display: none; }
     .kid-card.leading .kid-crown    { display: block; }
     .kid-card.worst   .kid-badmouth { display: block; }
-    .kid-avatar { width: 52px; height: 52px; border-radius: 50%; background: var(--c); opacity: .18; display: flex; align-items: center; justify-content: center; font-size: 26px; position: relative; }
-    .kid-avatar-emoji { position: absolute; font-size: 26px; opacity: 1; }
-    .kid-name   { font-size: 17px; font-weight: 700; }
-    .kid-amount { font-size: 34px; font-weight: 900; color: var(--c); line-height: 1; }
+    .kid-avatar       { width: 50px; height: 50px; border-radius: 50%; background: var(--c); opacity: .18; display: flex; align-items: center; justify-content: center; position: relative; }
+    .kid-avatar-emoji { position: absolute; font-size: 24px; opacity: 1; }
+    .kid-name   { font-size: 16px; font-weight: 700; }
+    .kid-amount { font-size: 32px; font-weight: 900; color: var(--c); line-height: 1; }
     .kid-count  { font-size: 11px; color: var(--muted); }
     .swear-btn  {
-      margin-top: 4px; width: 100%; padding: 13px 8px;
+      margin-top: 4px; width: 100%; padding: 12px 8px;
       background: var(--c); border: none; border-radius: 14px;
       color: #fff; font-size: 15px; font-weight: 700;
       cursor: pointer; transition: transform .1s, filter .1s; -webkit-appearance: none;
     }
     .swear-btn:active { transform: scale(.93); filter: brightness(.85); }
 
-    /* ── ACTIONS ── */
+    /* ════════ ACTIONS ════════ */
     .actions { padding: 0 14px 14px; display: flex; gap: 10px; }
-    .btn { flex: 1; padding: 14px 10px; border: none; border-radius: 15px; font-size: 14px; font-weight: 700; cursor: pointer; transition: transform .1s, opacity .1s; -webkit-appearance: none; }
+    .btn { flex: 1; padding: 13px 10px; border: none; border-radius: 15px; font-size: 14px; font-weight: 700; cursor: pointer; transition: transform .1s, opacity .1s; -webkit-appearance: none; }
     .btn:active { transform: scale(.96); opacity: .8; }
     .btn-ghost { background: var(--surface2); color: var(--muted); }
     .btn-grad  { background: linear-gradient(135deg, var(--purple), var(--pink)); color: #fff; }
 
-    /* ── ACTIVITY ── */
-    .section { padding: 0 14px 14px; }
+    /* ════════ ACTIVITY ════════ */
+    .section       { padding: 0 14px 14px; }
     .section-header { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 10px; }
     .activity-list { display: flex; flex-direction: column; gap: 8px; }
-    .activity-row { background: var(--surface); border-radius: 13px; padding: 11px 14px; display: flex; align-items: center; justify-content: space-between; }
+    .activity-row  { background: var(--surface); border-radius: 13px; padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; }
     .activity-left { display: flex; align-items: center; gap: 10px; }
-    .activity-dot  { width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
+    .activity-dot  { width: 9px; height: 9px; border-radius: 50%; background: var(--c); flex-shrink: 0; }
+    .activity-info { display: flex; flex-direction: column; gap: 1px; }
     .activity-name { font-weight: 600; font-size: 14px; }
-    .activity-right { display: flex; align-items: center; gap: 12px; }
+    .activity-by   { font-size: 11px; color: var(--muted); }
+    .activity-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
     .activity-time  { font-size: 11px; color: var(--muted); }
     .activity-badge { font-size: 12px; font-weight: 700; background: rgba(233,30,140,.15); color: var(--pink); border-radius: 8px; padding: 2px 8px; }
-    .empty      { text-align: center; padding: 30px 0; color: var(--muted); }
-    .empty-icon { font-size: 40px; margin-bottom: 8px; }
+    .empty      { text-align: center; padding: 28px 0; color: var(--muted); }
+    .empty-icon { font-size: 38px; margin-bottom: 8px; }
 
-    /* ── HISTORY VIEW ── */
+    /* ════════ HISTORY ════════ */
     .history-list { padding: 14px; display: flex; flex-direction: column; gap: 14px; }
-    .hist-card { background: var(--surface); border-radius: 20px; padding: 18px; }
-    .hist-month { font-size: 13px; color: var(--muted); font-weight: 600; margin-bottom: 12px; }
-    .hist-winner-box { background: linear-gradient(135deg, rgba(124,77,255,.15), rgba(233,30,140,.15)); border: 1px solid rgba(124,77,255,.3); border-radius: 14px; padding: 14px; text-align: center; margin-bottom: 12px; }
-    .hist-trophy { font-size: 28px; margin-bottom: 4px; }
+    .hist-card        { background: var(--surface); border-radius: 20px; padding: 18px; }
+    .hist-month       { font-size: 13px; color: var(--muted); font-weight: 600; margin-bottom: 12px; }
+    .hist-winner-box  { background: linear-gradient(135deg, rgba(124,77,255,.15), rgba(233,30,140,.15)); border: 1px solid rgba(124,77,255,.3); border-radius: 14px; padding: 14px; text-align: center; margin-bottom: 12px; }
+    .hist-trophy      { font-size: 28px; margin-bottom: 4px; }
     .hist-winner-name { font-size: 20px; font-weight: 900; }
-    .hist-prize { font-size: 13px; color: var(--muted); margin-top: 2px; }
-    .hist-rows { display: flex; flex-direction: column; gap: 6px; }
-    .hist-row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
-    .hist-row-left { display: flex; align-items: center; gap: 8px; }
-    .hist-row-dot  { width: 8px; height: 8px; border-radius: 50%; }
+    .hist-prize       { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .hist-rows  { display: flex; flex-direction: column; gap: 6px; }
+    .hist-row   { display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
+    .hist-row-left   { display: flex; align-items: center; gap: 8px; }
+    .hist-row-dot    { width: 8px; height: 8px; border-radius: 50%; }
     .hist-row-name   { font-weight: 600; }
     .hist-row-amount { color: var(--muted); }
 
-    /* ── REPORTS VIEW ── */
+    /* ════════ REPORTS ════════ */
     .reports-inner { padding: 14px; display: flex; flex-direction: column; gap: 14px; }
     .report-month-nav { display: flex; align-items: center; justify-content: space-between; background: var(--surface); border-radius: 16px; padding: 10px 14px; }
     .report-month-btn { background: var(--surface2); border: none; color: var(--text); font-size: 18px; width: 34px; height: 34px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
     .report-month-btn:disabled { opacity: .3; cursor: default; }
     .report-month-label { font-size: 14px; font-weight: 700; }
-    .chart-card { background: var(--surface); border-radius: 20px; padding: 16px; }
+    .chart-card  { background: var(--surface); border-radius: 20px; padding: 16px; }
     .chart-title { font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 12px; }
-    .chart-wrap { position: relative; height: 180px; }
+    .chart-wrap  { position: relative; height: 180px; }
     canvas.chart { display: block; width: 100%; height: 100%; }
     .chart-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 12px; }
     .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
-    .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .stat-card { background: var(--surface); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 4px; border-left: 3px solid var(--c); }
+    .legend-dot  { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .stats-grid  { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .stat-card   { background: var(--surface); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 4px; border-left: 3px solid var(--c); }
     .stat-name   { font-size: 13px; font-weight: 700; color: var(--c); }
     .stat-swears { font-size: 22px; font-weight: 900; }
     .stat-label  { font-size: 11px; color: var(--muted); }
     .stat-worst  { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
-    /* ── BOTTOM NAV ── */
-    .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: var(--surface); border-top: 1px solid var(--border); display: flex; padding-bottom: env(safe-area-inset-bottom); }
-    .nav-tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 8px; border: none; background: none; color: var(--muted); font-size: 10px; font-weight: 600; cursor: pointer; transition: color .2s; }
-    .nav-tab.active { color: var(--purple); }
-    .nav-icon { font-size: 20px; }
-
-    /* ── VIEW TOGGLE ── */
-    .view { display: none; }
-    .view.active { display: block; }
-
-    /* ── MODAL ── */
-    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 200; align-items: flex-end; justify-content: center; }
-    .overlay.open { display: flex; }
-    .modal {
-      background: var(--surface); border-radius: 28px 28px 0 0;
-      padding: 0 18px calc(20px + env(safe-area-inset-bottom));
-      width: 100%; max-width: 480px;
-      max-height: 88vh; overflow-y: auto;
-    }
-    .modal-sticky { position: sticky; top: 0; background: var(--surface); padding-top: 20px; padding-bottom: 4px; z-index: 10; }
-    .modal-handle { width: 40px; height: 4px; background: var(--surface2); border-radius: 4px; margin: 0 auto 14px; }
-    .modal-title { font-size: 22px; font-weight: 900; text-align: center; margin-bottom: 6px; }
-    .modal-sub   { font-size: 14px; color: var(--muted); text-align: center; margin-bottom: 16px; }
-    .modal-winner-box { background: linear-gradient(135deg, rgba(124,77,255,.2), rgba(233,30,140,.2)); border-radius: 18px; padding: 16px; text-align: center; margin-bottom: 14px; }
-    .modal-trophy      { font-size: 40px; margin-bottom: 6px; }
-    .modal-winner-name { font-size: 26px; font-weight: 900; }
-    .modal-prize       { font-size: 15px; color: rgba(255,255,255,.7); margin-top: 4px; }
-    .modal-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
-    .modal-row { background: var(--surface2); border-radius: 13px; padding: 13px 16px; display: flex; align-items: center; justify-content: space-between; }
-    .modal-row-left  { display: flex; align-items: center; gap: 10px; font-size: 15px; }
-    .modal-row-right { font-size: 14px; color: var(--muted); }
-    /* Payment section in modal */
-    .modal-payment {
-      background: rgba(0,200,100,.07); border: 1px solid rgba(0,200,100,.2);
-      border-radius: 16px; padding: 14px 16px; margin-bottom: 14px;
-    }
-    .modal-pay-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(0,220,110,.7); margin-bottom: 8px; }
-    .modal-pay-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-    .modal-pay-info { font-size: 15px; font-weight: 700; word-break: break-all; flex: 1; }
-    .modal-pay-copy { border: none; background: rgba(0,220,110,.15); color: rgba(0,220,110,1); border-radius: 10px; padding: 7px 12px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
-    .modal-pay-note { font-size: 12px; color: var(--muted); margin-top: 8px; }
-    .modal-confirm {
-      width: 100%; padding: 16px; border: none; border-radius: 16px;
-      background: linear-gradient(135deg, var(--purple), var(--pink));
-      color: #fff; font-size: 16px; font-weight: 800; cursor: pointer; margin-bottom: 10px;
-    }
-    .modal-cancel { width: 100%; padding: 14px; border: none; border-radius: 16px; background: var(--surface2); color: var(--muted); font-size: 15px; font-weight: 600; cursor: pointer; }
-
-    /* ── SETTINGS VIEW ── */
-    .settings-inner { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+    /* ════════ SETTINGS ════════ */
+    .settings-inner  { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
     .settings-section-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); padding: 4px 0 2px; }
-    .settings-card { background: var(--surface); border-radius: 18px; overflow: hidden; }
+    .settings-section-hint  { font-size: 12px; color: var(--muted); padding-bottom: 4px; line-height: 1.4; }
+    /* Jar people cards */
+    .settings-card { background: var(--surface); border-radius: 18px; overflow: hidden; margin-bottom: 0; }
     .settings-row-top { display: flex; align-items: center; gap: 10px; padding: 12px 14px 10px; }
     .settings-slot-emoji { font-size: 24px; flex-shrink: 0; width: 30px; text-align: center; }
     .settings-name-input {
       flex: 1; background: var(--surface2); border: 1px solid var(--border);
       border-radius: 10px; padding: 9px 11px;
-      color: var(--text); font-size: 15px; font-weight: 600;
-      outline: none; -webkit-appearance: none;
+      color: var(--text); font-size: 15px; font-weight: 600; outline: none; -webkit-appearance: none;
     }
     .settings-name-input:focus { border-color: var(--purple); }
-    .settings-color-wrap { position: relative; width: 34px; height: 34px; flex-shrink: 0; }
-    .settings-color-swatch { width: 34px; height: 34px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,0.25); pointer-events: none; }
+    .settings-color-wrap   { position: relative; width: 34px; height: 34px; flex-shrink: 0; }
+    .settings-color-swatch { width: 34px; height: 34px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,.25); pointer-events: none; }
     .settings-color-input  { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; border: none; padding: 0; }
-    .settings-delete-btn   { width: 30px; height: 30px; border-radius: 50%; border: none; background: rgba(255,68,68,.15); color: #ff6b6b; font-size: 18px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: background .15s; }
+    .settings-delete-btn   { width: 30px; height: 30px; border-radius: 50%; border: none; background: rgba(255,68,68,.15); color: #ff6b6b; font-size: 18px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
     .settings-delete-btn:active { background: rgba(255,68,68,.3); }
-    /* Payment info row */
-    .settings-row-pay { display: flex; align-items: center; gap: 10px; padding: 0 14px 12px 14px; border-top: 1px solid var(--border); margin-top: 2px; padding-top: 10px; }
-    .settings-pay-icon { font-size: 16px; flex-shrink: 0; width: 30px; text-align: center; }
+    .settings-row-pay { display: flex; align-items: center; gap: 10px; padding: 0 14px 12px; border-top: 1px solid var(--border); padding-top: 10px; }
+    .settings-pay-icon  { font-size: 16px; flex-shrink: 0; width: 30px; text-align: center; }
     .settings-pay-input {
       flex: 1; background: var(--surface2); border: 1px solid var(--border);
       border-radius: 10px; padding: 9px 11px;
-      color: var(--text); font-size: 13px; font-weight: 500;
-      outline: none; -webkit-appearance: none;
+      color: var(--text); font-size: 13px; font-weight: 500; outline: none; -webkit-appearance: none;
     }
     .settings-pay-input::placeholder { color: var(--muted); font-size: 12px; }
     .settings-pay-input:focus { border-color: rgba(0,220,110,.5); }
-    /* Add / Save */
+    /* App users */
+    .user-tag-list { display: flex; flex-direction: column; gap: 8px; }
+    .user-tag-row  {
+      background: var(--surface); border-radius: 14px;
+      padding: 11px 14px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .user-tag-left  { display: flex; align-items: center; gap: 10px; }
+    .user-tag-dot   { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .user-tag-name  { font-size: 15px; font-weight: 700; }
+    .user-tag-label { font-size: 11px; color: var(--muted); }
+    .user-tag-del   { width: 28px; height: 28px; border-radius: 50%; border: none; background: rgba(255,68,68,.12); color: #ff6b6b; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .user-add-row   { display: flex; gap: 10px; }
+    .user-add-input {
+      flex: 1; background: var(--surface); border: 2px solid var(--border);
+      border-radius: 14px; padding: 12px 14px;
+      color: var(--text); font-size: 15px; font-weight: 600; outline: none; -webkit-appearance: none;
+    }
+    .user-add-input:focus { border-color: var(--purple); }
+    .user-add-btn {
+      padding: 12px 16px; border: none; border-radius: 14px;
+      background: var(--purple); color: #fff; font-size: 14px; font-weight: 700;
+      cursor: pointer; white-space: nowrap; -webkit-appearance: none;
+    }
+    /* add / save */
     .settings-add-btn {
       display: flex; align-items: center; justify-content: center; gap: 8px;
       padding: 14px; border: 2px dashed rgba(124,77,255,.4); border-radius: 18px;
       background: none; color: var(--purple); font-size: 15px; font-weight: 700;
-      cursor: pointer; transition: border-color .15s, background .15s; -webkit-appearance: none;
+      cursor: pointer; -webkit-appearance: none;
     }
-    .settings-add-btn:active { background: rgba(124,77,255,.08); border-color: var(--purple); }
+    .settings-add-btn:active { background: rgba(124,77,255,.08); }
     .btn-settings-save {
       display: block; padding: 16px; border: none; border-radius: 16px;
       background: linear-gradient(135deg, var(--purple), var(--pink));
@@ -236,31 +270,83 @@
     }
     .btn-settings-save:active { opacity: .85; }
 
-    /* ── TOAST ── */
-    .toast {
-      position: fixed; top: 16px; left: 50%; transform: translateX(-50%) translateY(-80px);
-      background: rgba(255,255,255,.12); backdrop-filter: blur(20px);
-      color: #fff; padding: 10px 20px; border-radius: 100px; font-size: 14px; font-weight: 600;
-      z-index: 999; border: 1px solid rgba(255,255,255,.15);
-      transition: transform .3s cubic-bezier(.34,1.56,.64,1); white-space: nowrap;
-    }
+    /* ════════ BOTTOM NAV ════════ */
+    .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: var(--surface); border-top: 1px solid var(--border); display: flex; padding-bottom: env(safe-area-inset-bottom); }
+    .nav-tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 8px; border: none; background: none; color: var(--muted); font-size: 10px; font-weight: 600; cursor: pointer; transition: color .2s; }
+    .nav-tab.active { color: var(--purple); }
+    .nav-icon { font-size: 20px; }
+
+    /* ════════ VIEW TOGGLE ════════ */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ════════ MODAL ════════ */
+    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 200; align-items: flex-end; justify-content: center; }
+    .overlay.open { display: flex; }
+    .modal { background: var(--surface); border-radius: 28px 28px 0 0; padding: 0 18px calc(20px + env(safe-area-inset-bottom)); width: 100%; max-width: 480px; max-height: 88vh; overflow-y: auto; }
+    .modal-sticky   { position: sticky; top: 0; background: var(--surface); padding-top: 20px; padding-bottom: 4px; z-index: 10; }
+    .modal-handle   { width: 40px; height: 4px; background: var(--surface2); border-radius: 4px; margin: 0 auto 14px; }
+    .modal-title    { font-size: 22px; font-weight: 900; text-align: center; margin-bottom: 6px; }
+    .modal-sub      { font-size: 14px; color: var(--muted); text-align: center; margin-bottom: 16px; }
+    .modal-winner-box  { background: linear-gradient(135deg, rgba(124,77,255,.2), rgba(233,30,140,.2)); border-radius: 18px; padding: 16px; text-align: center; margin-bottom: 14px; }
+    .modal-trophy      { font-size: 40px; margin-bottom: 6px; }
+    .modal-winner-name { font-size: 26px; font-weight: 900; }
+    .modal-prize       { font-size: 15px; color: rgba(255,255,255,.7); margin-top: 4px; }
+    .modal-rows  { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+    .modal-row   { background: var(--surface2); border-radius: 13px; padding: 13px 16px; display: flex; align-items: center; justify-content: space-between; }
+    .modal-row-left  { display: flex; align-items: center; gap: 10px; font-size: 15px; }
+    .modal-row-right { font-size: 14px; color: var(--muted); }
+    .modal-payment   { background: rgba(0,200,100,.07); border: 1px solid rgba(0,200,100,.2); border-radius: 16px; padding: 14px 16px; margin-bottom: 14px; }
+    .modal-pay-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(0,220,110,.7); margin-bottom: 8px; }
+    .modal-pay-row   { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .modal-pay-info  { font-size: 15px; font-weight: 700; word-break: break-all; flex: 1; }
+    .modal-pay-copy  { border: none; background: rgba(0,220,110,.15); color: rgba(0,220,110,1); border-radius: 10px; padding: 7px 12px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+    .modal-pay-note  { font-size: 12px; color: var(--muted); margin-top: 8px; }
+    .modal-confirm   { width: 100%; padding: 16px; border: none; border-radius: 16px; background: linear-gradient(135deg, var(--purple), var(--pink)); color: #fff; font-size: 16px; font-weight: 800; cursor: pointer; margin-bottom: 10px; }
+    .modal-cancel    { width: 100%; padding: 14px; border: none; border-radius: 16px; background: var(--surface2); color: var(--muted); font-size: 15px; font-weight: 600; cursor: pointer; }
+
+    /* ════════ TOAST ════════ */
+    .toast { position: fixed; top: 16px; left: 50%; transform: translateX(-50%) translateY(-80px); background: rgba(255,255,255,.12); backdrop-filter: blur(20px); color: #fff; padding: 10px 20px; border-radius: 100px; font-size: 14px; font-weight: 600; z-index: 999; border: 1px solid rgba(255,255,255,.15); transition: transform .3s cubic-bezier(.34,1.56,.64,1); white-space: nowrap; }
     .toast.show { transform: translateX(-50%) translateY(0); }
 
-    /* ── PULSE ── */
+    /* ════════ PULSE ════════ */
     @keyframes pulse { 0%{transform:scale(1)} 50%{transform:scale(1.06)} 100%{transform:scale(1)} }
     .pulse { animation: pulse .2s ease; }
   </style>
 </head>
 <body>
 
+  <!-- ═══════════ LOGIN SCREEN ═══════════ -->
+  <div id="login-screen" class="login-screen">
+    <div class="login-logo">🤐</div>
+    <div class="login-title">Swear Jar</div>
+    <div class="login-sub">Who's using the app?</div>
+    <div class="login-grid" id="login-grid"></div>
+    <div class="login-divider" style="margin-top:20px; width:100%; max-width:400px">
+      <div class="login-divider-text">or enter a name</div>
+    </div>
+    <div class="login-custom-row">
+      <input id="login-custom-input" class="login-custom-input" type="text"
+        placeholder="Type your name…" maxlength="30"
+        onkeydown="if(event.key==='Enter') loginCustom()" />
+      <button class="login-custom-btn" onclick="loginCustom()">Go →</button>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
-  <!-- ═══════════════ TRACKER ═══════════════ -->
+  <!-- ═══════════ TRACKER ═══════════ -->
   <div class="view active" id="view-tracker">
     <div class="header">
       <div class="header-row">
         <div class="app-title">🤐 Swear Jar</div>
-        <div class="month-chip" id="month-chip">—</div>
+        <div class="header-meta">
+          <div class="month-chip" id="month-chip">—</div>
+          <button class="user-chip" id="user-chip" onclick="promptSwitchUser()">
+            <div class="user-chip-dot" id="user-chip-dot" style="background:#888"></div>
+            <span id="user-chip-name">—</span>
+          </button>
+        </div>
       </div>
       <div class="pot-card">
         <div class="pot-left">
@@ -284,86 +370,73 @@
     </div>
   </div>
 
-  <!-- ═══════════════ HISTORY ═══════════════ -->
+  <!-- ═══════════ HISTORY ═══════════ -->
   <div class="view" id="view-history">
-    <div class="header">
-      <div class="header-row-bare">
-        <div class="app-title">🏅 History</div>
-      </div>
-    </div>
+    <div class="header"><div class="header-row-bare"><div class="app-title">🏅 History</div></div></div>
     <div class="history-list" id="history-list"></div>
   </div>
 
-  <!-- ═══════════════ REPORTS ═══════════════ -->
+  <!-- ═══════════ REPORTS ═══════════ -->
   <div class="view" id="view-reports">
-    <div class="header">
-      <div class="header-row-bare">
-        <div class="app-title">📈 Reports</div>
-      </div>
-    </div>
+    <div class="header"><div class="header-row-bare"><div class="app-title">📈 Reports</div></div></div>
     <div class="reports-inner">
-      <!-- Month navigation -->
       <div class="report-month-nav">
         <button class="report-month-btn" id="rep-prev" onclick="reportMonthStep(-1)">‹</button>
         <div class="report-month-label" id="rep-month-label">—</div>
         <button class="report-month-btn" id="rep-next" onclick="reportMonthStep(1)">›</button>
       </div>
-      <!-- Bar chart -->
       <div class="chart-card">
         <div class="chart-title">Swears by Day</div>
-        <div class="chart-wrap">
-          <canvas class="chart" id="report-canvas"></canvas>
-        </div>
+        <div class="chart-wrap"><canvas class="chart" id="report-canvas"></canvas></div>
         <div class="chart-legend" id="chart-legend"></div>
       </div>
-      <!-- Per-person stats -->
       <div class="section-header" style="padding:0">Totals</div>
       <div class="stats-grid" id="stats-grid"></div>
     </div>
   </div>
 
-  <!-- ═══════════════ SETTINGS ═══════════════ -->
+  <!-- ═══════════ SETTINGS ═══════════ -->
   <div class="view" id="view-settings">
-    <div class="header">
-      <div class="header-row-bare">
-        <div class="app-title">⚙️ Settings</div>
-      </div>
-    </div>
+    <div class="header"><div class="header-row-bare"><div class="app-title">⚙️ Settings</div></div></div>
     <div class="settings-inner">
+
       <div class="settings-section-label">People in the jar</div>
       <div id="settings-list"></div>
       <button class="settings-add-btn" onclick="addSettingsRow()">＋ Add Person</button>
-      <div class="settings-section-label" style="margin-top:4px">Save</div>
+
+      <div class="settings-section-label" style="margin-top:8px">App Users</div>
+      <div class="settings-section-hint">Everyone who opens this app. They'll pick their name before logging swears so you always know who recorded what.</div>
+      <div class="user-tag-list" id="users-list"></div>
+      <div class="user-add-row">
+        <input id="new-user-input" class="user-add-input" type="text"
+          placeholder="Add name (e.g. Mom, Dad…)" maxlength="30"
+          onkeydown="if(event.key==='Enter') addAppUser()" />
+        <button class="user-add-btn" onclick="addAppUser()">+ Add</button>
+      </div>
+
+      <div class="settings-section-label" style="margin-top:8px">Save</div>
       <button class="btn-settings-save" onclick="saveSettingsFromForm()">Save Changes</button>
     </div>
   </div>
 
-  <!-- ═══════════════ BOTTOM NAV ═══════════════ -->
+  <!-- ═══════════ BOTTOM NAV ═══════════ -->
   <div class="bottom-nav">
-    <button class="nav-tab active" id="tab-tracker" onclick="switchView('tracker')">
-      <span class="nav-icon">🎯</span><span>Tracker</span>
-    </button>
-    <button class="nav-tab" id="tab-history" onclick="switchView('history')">
-      <span class="nav-icon">🏅</span><span>History</span>
-    </button>
-    <button class="nav-tab" id="tab-reports" onclick="switchView('reports')">
-      <span class="nav-icon">📈</span><span>Reports</span>
-    </button>
-    <button class="nav-tab" id="tab-settings" onclick="switchView('settings')">
-      <span class="nav-icon">⚙️</span><span>Settings</span>
-    </button>
+    <button class="nav-tab active" id="tab-tracker"  onclick="switchView('tracker')"><span class="nav-icon">🎯</span><span>Tracker</span></button>
+    <button class="nav-tab"        id="tab-history"  onclick="switchView('history')"><span class="nav-icon">🏅</span><span>History</span></button>
+    <button class="nav-tab"        id="tab-reports"  onclick="switchView('reports')"><span class="nav-icon">📈</span><span>Reports</span></button>
+    <button class="nav-tab"        id="tab-settings" onclick="switchView('settings')"><span class="nav-icon">⚙️</span><span>Settings</span></button>
   </div>
 
-  <!-- ═══════════════ END-MONTH MODAL ═══════════════ -->
+  <!-- ═══════════ END-MONTH MODAL ═══════════ -->
   <div class="overlay" id="overlay" onclick="handleOverlayClick(event)">
-    <div class="modal" id="modal">
+    <div class="modal">
       <div class="modal-sticky">
         <div class="modal-handle"></div>
         <div class="modal-title">End the Month? 🏆</div>
         <div class="modal-sub" id="modal-sub"></div>
       </div>
       <div class="modal-winner-box" id="modal-winner-box"></div>
-      <div class="modal-rows" id="modal-rows"></div>
+      <div class="modal-rows"       id="modal-rows"></div>
       <div id="modal-payment"></div>
       <button class="modal-confirm" onclick="confirmEndMonth()">Confirm & Reset Month</button>
       <button class="modal-cancel"  onclick="closeModal()">Cancel</button>
@@ -372,30 +445,23 @@
 
   <script>
   // ══════════════════════════════════════════════════════
-  //  CONFIG
+  //  CONSTANTS
   // ══════════════════════════════════════════════════════
-  const SLOT_EMOJI = ['👧','🧒','👦','🧑','👩','👨','🧔','👱','🧕','👲'];
-  const DEFAULT_SETTINGS = [
+  const SLOT_EMOJI   = ['👧','🧒','👦','🧑','👩','👨','🧔','👱','🧕','👲'];
+  const EXTRA_EMOJI  = ['👩','👨','🧓','👴','👵','🧑‍💼','👷','🧑‍🦱'];
+  const PALETTE      = ['#e91e8c','#00c2e0','#56c278','#ffa726','#ab47bc','#ef5350','#26c6da','#66bb6a','#ffa000','#8d6e63'];
+  const MONTHS       = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const DEFAULT_KIDS = [
     { name:'Delaney', color:'#e91e8c', paymentInfo:'' },
     { name:'Hadley',  color:'#00c2e0', paymentInfo:'' },
     { name:'Emerson', color:'#56c278', paymentInfo:'' },
     { name:'Grant',   color:'#ffa726', paymentInfo:'' },
   ];
-  const MONTHS = ['January','February','March','April','May','June',
-                  'July','August','September','October','November','December'];
-  const PALETTE = ['#e91e8c','#00c2e0','#56c278','#ffa726','#ab47bc','#ef5350','#26c6da','#66bb6a','#ffa000','#8d6e63'];
 
-  // ── Settings storage ──
+  // ── Settings (jar people) ──
   function loadSettings() {
-    try {
-      const s = localStorage.getItem('swearjar2-settings');
-      if (s) {
-        const arr = JSON.parse(s);
-        // Backfill paymentInfo for older saves
-        return arr.map(x => ({ paymentInfo:'', ...x }));
-      }
-    } catch(e) {}
-    return DEFAULT_SETTINGS.map(k => ({...k}));
+    try { const s = localStorage.getItem('swearjar2-settings'); if (s) return JSON.parse(s).map(x=>({paymentInfo:'',...x})); } catch(e) {}
+    return DEFAULT_KIDS.map(k=>({...k}));
   }
   function saveSettings(s) { localStorage.setItem('swearjar2-settings', JSON.stringify(s)); }
 
@@ -403,10 +469,22 @@
   let KIDS      = settings.map(s => s.name);
   let COLORS    = Object.fromEntries(settings.map(s => [s.name, s.color]));
   let COLOR_HEX = Object.fromEntries(settings.map(s => [s.name, s.color]));
-  let EMOJI     = Object.fromEntries(settings.map((s,i) => [s.name, SLOT_EMOJI[i] ?? '🧒']));
-  let PAY_INFO  = Object.fromEntries(settings.map(s => [s.name, s.paymentInfo ?? '']));
+  let EMOJI     = Object.fromEntries(settings.map((s,i) => [s.name, SLOT_EMOJI[i]??'🧒']));
+  let PAY_INFO  = Object.fromEntries(settings.map(s => [s.name, s.paymentInfo??'']));
 
-  // ── Game state storage ──
+  // ── App users (who can log in) ──
+  function loadAppUsers() {
+    try { const s = localStorage.getItem('swearjar2-users'); if (s) return JSON.parse(s); } catch(e) {}
+    // Default: same as jar members
+    return KIDS.map(name => ({ name }));
+  }
+  function saveAppUsers(u) { localStorage.setItem('swearjar2-users', JSON.stringify(u)); }
+  let appUsers = loadAppUsers();
+
+  // ── Current user (session only) ──
+  let currentUser = sessionStorage.getItem('swearjar2-user') || null;
+
+  // ── Game state ──
   function defaultState() {
     const kids = {};
     KIDS.forEach(k => { kids[k] = { amount:0, swears:0 }; });
@@ -417,9 +495,7 @@
       const s = localStorage.getItem('swearjar2');
       if (s) {
         const data = JSON.parse(s);
-        (data.monthlyResults || []).forEach(r => {
-          if (!r.winners && r.winner) { r.winners = [r.winner]; delete r.winner; }
-        });
+        (data.monthlyResults||[]).forEach(r => { if (!r.winners&&r.winner){r.winners=[r.winner];delete r.winner;} });
         return data;
       }
     } catch(e) {}
@@ -431,42 +507,89 @@
   // ══════════════════════════════════════════════════════
   //  HELPERS
   // ══════════════════════════════════════════════════════
-  function currentMonthKey() {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-  }
-  function formatMonthKey(key) {
-    if (!key) return '—';
-    const [y,m] = key.split('-');
-    return `${MONTHS[parseInt(m)-1]} ${y}`;
-  }
-  function totalPot() {
-    return Object.values(state.kids).reduce((s,k) => s + k.amount, 0);
-  }
+  function currentMonthKey() { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
+  function formatMonthKey(k) { if(!k) return '—'; const [y,m]=k.split('-'); return `${MONTHS[parseInt(m)-1]} ${y}`; }
+  function totalPot() { return Object.values(state.kids).reduce((s,k)=>s+k.amount,0); }
   function getWinners() {
-    const min = Math.min(...KIDS.map(k => state.kids[k]?.amount ?? 0));
-    return KIDS.filter(k => (state.kids[k]?.amount ?? 0) === min);
+    const min = Math.min(...KIDS.map(k=>state.kids[k]?.amount??0));
+    return KIDS.filter(k=>(state.kids[k]?.amount??0)===min);
   }
   function getWorst() {
-    if (totalPot() === 0) return [];
-    const max = Math.max(...KIDS.map(k => state.kids[k]?.amount ?? 0));
-    if (max === 0) return [];
-    return KIDS.filter(k => (state.kids[k]?.amount ?? 0) === max);
+    if (totalPot()===0) return [];
+    const max = Math.max(...KIDS.map(k=>state.kids[k]?.amount??0));
+    if (max===0) return [];
+    return KIDS.filter(k=>(state.kids[k]?.amount??0)===max);
   }
   function relativeTime(iso) {
-    const diff = (Date.now() - new Date(iso)) / 1000;
-    if (diff < 60)    return 'just now';
-    if (diff < 3600)  return `${Math.floor(diff/60)}m ago`;
-    if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
-    const d = new Date(iso);
-    return `${MONTHS[d.getMonth()].slice(0,3)} ${d.getDate()}`;
+    const diff = (Date.now()-new Date(iso))/1000;
+    if (diff<60)    return 'just now';
+    if (diff<3600)  return `${Math.floor(diff/60)}m ago`;
+    if (diff<86400) return `${Math.floor(diff/3600)}h ago`;
+    const d=new Date(iso); return `${MONTHS[d.getMonth()].slice(0,3)} ${d.getDate()}`;
   }
-  function escHtml(str) {
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function copyToClipboard(text) { navigator.clipboard?.writeText(text).catch(()=>{}); toast(`Copied: ${text} 📋`); }
+
+  // Color for a user name (jar member color or fallback purple)
+  function userColor(name) { return COLOR_HEX[name] ?? '#7c4dff'; }
+  // Emoji for a user (jar member emoji or cycle through extras)
+  function userEmoji(name, idx) {
+    const jarIdx = KIDS.indexOf(name);
+    if (jarIdx >= 0) return SLOT_EMOJI[jarIdx] ?? '🧒';
+    return EXTRA_EMOJI[idx % EXTRA_EMOJI.length];
   }
-  function copyToClipboard(text) {
-    navigator.clipboard?.writeText(text).catch(() => {});
-    toast(`Copied: ${text} 📋`);
+
+  // ══════════════════════════════════════════════════════
+  //  LOGIN
+  // ══════════════════════════════════════════════════════
+  function renderLoginScreen() {
+    const grid = document.getElementById('login-grid');
+    grid.innerHTML = appUsers.map((u, i) => {
+      const color = userColor(u.name);
+      const emoji = userEmoji(u.name, i);
+      const isJar = KIDS.includes(u.name);
+      return `
+        <button class="login-btn" style="border-color:${color}22"
+          onclick="loginAs('${escHtml(u.name)}')"
+          onmouseover="this.style.borderColor='${color}'"
+          onmouseout="this.style.borderColor='${color}22'">
+          <div class="login-btn-emoji">${emoji}</div>
+          <div class="login-btn-info">
+            <div class="login-btn-name">${escHtml(u.name)}</div>
+            ${isJar ? `<div class="login-btn-sub" style="color:${color}">in the jar</div>` : '<div class="login-btn-sub">logging swears</div>'}
+          </div>
+          <div style="margin-left:auto; width:10px; height:10px; border-radius:50%; background:${color}; flex-shrink:0"></div>
+        </button>`;
+    }).join('');
+    document.getElementById('login-custom-input').value = '';
+  }
+
+  function loginAs(name) {
+    currentUser = name;
+    sessionStorage.setItem('swearjar2-user', name);
+    document.getElementById('login-screen').classList.add('hidden');
+    updateUserChip();
+    toast(`Welcome, ${name}! 👋`);
+  }
+
+  function loginCustom() {
+    const val = document.getElementById('login-custom-input').value.trim();
+    if (!val) return;
+    loginAs(val);
+  }
+
+  function promptSwitchUser() {
+    currentUser = null;
+    sessionStorage.removeItem('swearjar2-user');
+    document.getElementById('login-custom-input').value = '';
+    document.getElementById('login-screen').classList.remove('hidden');
+    renderLoginScreen();
+  }
+
+  function updateUserChip() {
+    if (!currentUser) return;
+    document.getElementById('user-chip-name').textContent = currentUser;
+    document.getElementById('user-chip-dot').style.background = userColor(currentUser);
   }
 
   // ══════════════════════════════════════════════════════
@@ -476,7 +599,7 @@
     if (!state.kids[kid]) state.kids[kid] = { amount:0, swears:0 };
     state.kids[kid].amount++;
     state.kids[kid].swears++;
-    state.history.unshift({ kid, ts: new Date().toISOString() });
+    state.history.unshift({ kid, ts: new Date().toISOString(), addedBy: currentUser ?? 'Unknown' });
     if (state.history.length > 500) state.history.length = 500;
     save(); render();
     toast(`${kid} owes $1 💸`);
@@ -488,106 +611,71 @@
     if (!state.history.length) { toast('Nothing to undo!'); return; }
     const { kid } = state.history.shift();
     if (state.kids[kid]) {
-      state.kids[kid].amount = Math.max(0, state.kids[kid].amount - 1);
-      state.kids[kid].swears = Math.max(0, state.kids[kid].swears - 1);
+      state.kids[kid].amount = Math.max(0, state.kids[kid].amount-1);
+      state.kids[kid].swears = Math.max(0, state.kids[kid].swears-1);
     }
     save(); render();
     toast(`Undid ${kid}'s swear ↩`);
   }
 
   function openEndMonth() {
-    const pot     = totalPot();
-    const winners = getWinners();
-    const sorted  = [...KIDS].sort((a,b) => (state.kids[a]?.amount??0) - (state.kids[b]?.amount??0));
-
+    const pot=totalPot(), winners=getWinners();
+    const sorted=[...KIDS].sort((a,b)=>(state.kids[a]?.amount??0)-(state.kids[b]?.amount??0));
     document.getElementById('modal-sub').textContent =
-      pot === 0
-        ? 'No swears this month — everyone wins! 🎉'
-        : winners.length > 1
-          ? `${winners.join(' & ')} tied with the fewest swears!`
-          : `${winners[0]} had the fewest swears and wins the pot!`;
-
-    const prize = winners.length > 1
-      ? `Each wins $${(pot / winners.length).toFixed(2)}`
-      : `Wins $${pot}!`;
-
+      pot===0 ? 'No swears this month — everyone wins! 🎉'
+      : winners.length>1 ? `${winners.join(' & ')} tied with the fewest swears!`
+      : `${winners[0]} had the fewest swears and wins the pot!`;
+    const prize = winners.length>1 ? `Each wins $${(pot/winners.length).toFixed(2)}` : `Wins $${pot}!`;
     document.getElementById('modal-winner-box').innerHTML = `
-      <div class="modal-trophy">${winners.length > 1 ? '🤝' : '🏆'}</div>
+      <div class="modal-trophy">${winners.length>1?'🤝':'🏆'}</div>
       <div class="modal-winner-name" style="color:${COLOR_HEX[winners[0]]}">${winners.join(' & ')}</div>
-      <div class="modal-prize">${prize}</div>
-    `;
-
-    document.getElementById('modal-rows').innerHTML = sorted.map((kid,i) => `
+      <div class="modal-prize">${prize}</div>`;
+    document.getElementById('modal-rows').innerHTML = sorted.map((kid,i)=>`
       <div class="modal-row">
         <div class="modal-row-left">
           <span>${i===0?'🥇':i===1?'🥈':i===2?'🥉':'4️⃣'}</span>
-          <span style="font-weight:700;color:${COLOR_HEX[kid]}">${kid}</span>
+          <span style="font-weight:700;color:${COLOR_HEX[kid]}">${escHtml(kid)}</span>
         </div>
         <div class="modal-row-right">${state.kids[kid]?.swears??0} swear${(state.kids[kid]?.swears??0)!==1?'s':''} = $${state.kids[kid]?.amount??0}</div>
-      </div>
-    `).join('');
-
-    // Payment section — show winner's payment info if available
-    const payEl = document.getElementById('modal-payment');
-    const winnerPayInfos = winners
-      .map(w => ({ name: w, info: PAY_INFO[w] ?? '' }))
-      .filter(x => x.info.trim());
-
-    if (pot > 0 && winnerPayInfos.length > 0) {
-      payEl.innerHTML = `
-        <div class="modal-payment">
-          <div class="modal-pay-label">💸 Pay the winner</div>
-          ${winnerPayInfos.map(({ name, info }) => `
-            <div class="modal-pay-row">
-              <div class="modal-pay-info" style="color:${COLOR_HEX[name]}">${escHtml(info)}</div>
-              <button class="modal-pay-copy" onclick="copyToClipboard('${escHtml(info)}')">📋 Copy</button>
-            </div>
-          `).join('')}
-          <div class="modal-pay-note">Each person owes ${winners.length > 1 ? 'a share of' : ''} $${pot} to ${winners.join(' & ')}</div>
-        </div>
-      `;
-    } else {
-      payEl.innerHTML = '';
-    }
-
+      </div>`).join('');
+    const winnerPays = winners.map(w=>({name:w,info:PAY_INFO[w]??''})).filter(x=>x.info.trim());
+    document.getElementById('modal-payment').innerHTML = (pot>0 && winnerPays.length>0) ? `
+      <div class="modal-payment">
+        <div class="modal-pay-label">💸 Pay the winner</div>
+        ${winnerPays.map(({name,info})=>`
+          <div class="modal-pay-row">
+            <div class="modal-pay-info" style="color:${COLOR_HEX[name]}">${escHtml(info)}</div>
+            <button class="modal-pay-copy" onclick="copyToClipboard('${escHtml(info)}')">📋 Copy</button>
+          </div>`).join('')}
+        <div class="modal-pay-note">Each person owes ${winners.length>1?'a share of':''} $${pot} to ${winners.join(' & ')}</div>
+      </div>` : '';
     document.getElementById('overlay').classList.add('open');
   }
 
   function confirmEndMonth() {
-    const pot     = totalPot();
-    const winners = getWinners();
-    const month   = currentMonthKey();
-    state.monthlyResults.unshift({
-      month, winners, pot,
-      kids: JSON.parse(JSON.stringify(state.kids)),
-    });
-    KIDS.forEach(k => { state.kids[k] = { amount:0, swears:0 }; });
-    state.history = [];
-    save(); closeModal(); render();
-    switchView('tracker');
+    const pot=totalPot(), winners=getWinners(), month=currentMonthKey();
+    state.monthlyResults.unshift({ month, winners, pot, kids: JSON.parse(JSON.stringify(state.kids)) });
+    KIDS.forEach(k=>{state.kids[k]={amount:0,swears:0};});
+    state.history=[];
+    save(); closeModal(); render(); switchView('tracker');
     toast(`${winners.join(' & ')} win${winners.length>1?'':'s'} $${pot}! 🏆`);
   }
 
   function closeModal() { document.getElementById('overlay').classList.remove('open'); }
-  function handleOverlayClick(e) { if (e.target === document.getElementById('overlay')) closeModal(); }
+  function handleOverlayClick(e) { if (e.target===document.getElementById('overlay')) closeModal(); }
 
   // ══════════════════════════════════════════════════════
   //  RENDER — TRACKER
   // ══════════════════════════════════════════════════════
   function render() {
-    const pot     = totalPot();
-    const winners = getWinners();
-    const worst   = getWorst();
-
-    document.getElementById('month-chip').textContent  = formatMonthKey(currentMonthKey());
-    document.getElementById('pot-amount').textContent  = `$${pot}`;
-    document.getElementById('pot-leader').textContent  = pot > 0 ? winners.join(' & ') : '—';
-
-    document.getElementById('kids-grid').innerHTML = KIDS.map(kid => {
-      const { amount=0, swears=0 } = state.kids[kid] ?? {};
-      const isLeading = pot > 0 && winners.includes(kid);
-      const isWorst   = worst.includes(kid);
-      const cls = ['kid-card', isLeading?'leading':'', isWorst?'worst':''].filter(Boolean).join(' ');
+    const pot=totalPot(), winners=getWinners(), worst=getWorst();
+    document.getElementById('month-chip').textContent = formatMonthKey(currentMonthKey());
+    document.getElementById('pot-amount').textContent = `$${pot}`;
+    document.getElementById('pot-leader').textContent = pot>0 ? winners.join(' & ') : '—';
+    document.getElementById('kids-grid').innerHTML = KIDS.map(kid=>{
+      const {amount=0,swears=0}=state.kids[kid]??{};
+      const isLeading=pot>0&&winners.includes(kid), isWorst=worst.includes(kid);
+      const cls=['kid-card',isLeading?'leading':'',isWorst?'worst':''].filter(Boolean).join(' ');
       return `
         <div class="${cls}" data-kid="${kid}" style="--c:${COLORS[kid]??'#888'}">
           <div class="kid-badmouth">🤬</div>
@@ -599,17 +687,18 @@
           <button class="swear-btn" onclick="addSwear('${escHtml(kid)}')">🤬 +$1</button>
         </div>`;
     }).join('');
-
-    const recent = state.history.slice(0, 12);
-    const actEl  = document.getElementById('activity-list');
+    const recent=state.history.slice(0,12), actEl=document.getElementById('activity-list');
     if (!recent.length) {
-      actEl.innerHTML = `<div class="empty"><div class="empty-icon">😇</div><div>No swears yet this month!</div></div>`;
+      actEl.innerHTML=`<div class="empty"><div class="empty-icon">😇</div><div>No swears yet this month!</div></div>`;
     } else {
-      actEl.innerHTML = recent.map(({ kid, ts }) => `
+      actEl.innerHTML = recent.map(({kid,ts,addedBy})=>`
         <div class="activity-row" style="--c:${COLORS[kid]??'#888'}">
           <div class="activity-left">
             <div class="activity-dot"></div>
-            <div class="activity-name">${escHtml(kid)}</div>
+            <div class="activity-info">
+              <div class="activity-name">${escHtml(kid)}</div>
+              ${addedBy ? `<div class="activity-by">recorded by ${escHtml(addedBy)}</div>` : ''}
+            </div>
           </div>
           <div class="activity-right">
             <div class="activity-time">${relativeTime(ts)}</div>
@@ -623,32 +712,29 @@
   //  RENDER — HISTORY
   // ══════════════════════════════════════════════════════
   function renderHistory() {
-    const el = document.getElementById('history-list');
+    const el=document.getElementById('history-list');
     if (!state.monthlyResults.length) {
-      el.innerHTML = `<div class="empty" style="padding:40px 0"><div class="empty-icon">📋</div><div>No months completed yet</div><div style="font-size:13px;margin-top:6px;color:var(--muted)">End a month to see results here</div></div>`;
+      el.innerHTML=`<div class="empty" style="padding:40px 0"><div class="empty-icon">📋</div><div>No months completed yet</div><div style="font-size:13px;margin-top:6px;color:var(--muted)">End a month to see results here</div></div>`;
       return;
     }
-    el.innerHTML = state.monthlyResults.map(r => {
-      const allKids = Object.keys(r.kids);
-      const sorted  = [...allKids].sort((a,b) => (r.kids[a]?.amount??0) - (r.kids[b]?.amount??0));
-      const prizeStr   = r.winners?.length > 1 ? `Each won $${(r.pot / r.winners.length).toFixed(2)}` : `Won $${r.pot}`;
-      const winnerName = (r.winners ?? [r.winner]).join(' & ');
-      const winnerColor= COLOR_HEX[(r.winners??[r.winner])[0]] ?? '#fff';
+    el.innerHTML=state.monthlyResults.map(r=>{
+      const allKids=Object.keys(r.kids);
+      const sorted=[...allKids].sort((a,b)=>(r.kids[a]?.amount??0)-(r.kids[b]?.amount??0));
+      const wNames=(r.winners??[r.winner]).join(' & ');
+      const wColor=COLOR_HEX[(r.winners??[r.winner])[0]]??'#fff';
+      const prizeStr=r.winners?.length>1?`Each won $${(r.pot/r.winners.length).toFixed(2)}`:`Won $${r.pot}`;
       return `
         <div class="hist-card">
           <div class="hist-month">${formatMonthKey(r.month)}</div>
           <div class="hist-winner-box">
             <div class="hist-trophy">🏆</div>
-            <div class="hist-winner-name" style="color:${winnerColor}">${winnerName}</div>
+            <div class="hist-winner-name" style="color:${wColor}">${wNames}</div>
             <div class="hist-prize">${prizeStr}</div>
           </div>
           <div class="hist-rows">
-            ${sorted.map(kid => `
+            ${sorted.map(kid=>`
               <div class="hist-row">
-                <div class="hist-row-left">
-                  <div class="hist-row-dot" style="background:${COLOR_HEX[kid]??'#888'}"></div>
-                  <span class="hist-row-name" style="color:${COLOR_HEX[kid]??'#888'}">${escHtml(kid)}</span>
-                </div>
+                <div class="hist-row-left"><div class="hist-row-dot" style="background:${COLOR_HEX[kid]??'#888'}"></div><span class="hist-row-name" style="color:${COLOR_HEX[kid]??'#888'}">${escHtml(kid)}</span></div>
                 <div class="hist-row-amount">${r.kids[kid]?.swears??0} swears = $${r.kids[kid]?.amount??0}</div>
               </div>`).join('')}
           </div>
@@ -659,263 +745,61 @@
   // ══════════════════════════════════════════════════════
   //  RENDER — REPORTS
   // ══════════════════════════════════════════════════════
-  let reportMonthIndex = 0; // 0 = current month, 1 = most recent past, etc.
-
-  function reportMonthStep(dir) {
-    const maxIdx = state.monthlyResults.length; // 0..maxIdx
-    reportMonthIndex = Math.max(0, Math.min(maxIdx, reportMonthIndex + dir));
-    renderReports();
-  }
-
+  let reportMonthIndex=0;
+  function reportMonthStep(dir) { reportMonthIndex=Math.max(0,Math.min(state.monthlyResults.length,reportMonthIndex+dir)); renderReports(); }
   function getReportData() {
-    // Index 0 = current month (from live state.history)
-    // Index 1+ = completed months from monthlyResults[index-1]
-    if (reportMonthIndex === 0) {
-      return { monthKey: currentMonthKey(), history: state.history };
-    } else {
-      const r = state.monthlyResults[reportMonthIndex - 1];
-      if (!r) return { monthKey: currentMonthKey(), history: [] };
-      // Reconstruct history-like list from kids totals (we don't store daily breakdown for past months)
-      // We just store the totals, so past months can only show totals, not daily breakdown
-      return { monthKey: r.month, history: null, pastResult: r };
-    }
+    if (reportMonthIndex===0) return {monthKey:currentMonthKey(),history:state.history};
+    const r=state.monthlyResults[reportMonthIndex-1];
+    return r ? {monthKey:r.month,history:null,pastResult:r} : {monthKey:currentMonthKey(),history:[]};
   }
-
   function renderReports() {
-    const maxIdx = state.monthlyResults.length;
-    document.getElementById('rep-prev').disabled = (reportMonthIndex >= maxIdx);
-    document.getElementById('rep-next').disabled = (reportMonthIndex <= 0);
-
-    const { monthKey, history, pastResult } = getReportData();
-    document.getElementById('rep-month-label').textContent = formatMonthKey(monthKey);
-
-    if (pastResult) {
-      // Past month — show totals only, no daily chart
-      renderPastReports(pastResult);
-      return;
-    }
-
-    // Current month — daily breakdown chart
-    const byDate = {};
-    (history || []).forEach(({ kid, ts }) => {
-      const date = ts.split('T')[0];
-      if (!byDate[date]) byDate[date] = {};
-      byDate[date][kid] = (byDate[date][kid] || 0) + 1;
-    });
-
-    // Build dates array for current month up to today
-    const now  = new Date();
-    const mPfx = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-    const dates = [];
-    for (let d = 1; d <= now.getDate(); d++) {
-      dates.push(`${mPfx}-${String(d).padStart(2,'0')}`);
-    }
-
-    const maxVal = Math.max(1, ...dates.map(dt =>
-      KIDS.reduce((s, k) => s + (byDate[dt]?.[k] ?? 0), 0)
-    ));
-
-    drawChart(dates, byDate, maxVal);
-
-    // Legend
-    document.getElementById('chart-legend').innerHTML = KIDS.map(k => `
-      <div class="legend-item">
-        <div class="legend-dot" style="background:${COLOR_HEX[k]??'#888'}"></div>
-        <span>${escHtml(k)}</span>
-      </div>`).join('');
-
-    // Stats grid — current month from live state
-    document.getElementById('stats-grid').innerHTML = KIDS.map(kid => {
-      const { amount=0, swears=0 } = state.kids[kid] ?? {};
-      // Find worst day
-      let worstDay = null, worstCount = 0;
-      Object.entries(byDate).forEach(([dt, d]) => {
-        const c = d[kid] ?? 0;
-        if (c > worstCount) { worstCount = c; worstDay = dt; }
-      });
-      const worstLabel = worstDay
-        ? `Worst: ${MONTHS[parseInt(worstDay.split('-')[1])-1].slice(0,3)} ${parseInt(worstDay.split('-')[2])} (${worstCount})`
-        : 'No swears yet!';
-      return `
-        <div class="stat-card" style="--c:${COLOR_HEX[kid]??'#888'}">
-          <div class="stat-name">${escHtml(kid)}</div>
-          <div class="stat-swears">${swears}</div>
-          <div class="stat-label">swear${swears!==1?'s':''} = $${amount}</div>
-          <div class="stat-worst">${worstLabel}</div>
-        </div>`;
+    const max=state.monthlyResults.length;
+    document.getElementById('rep-prev').disabled=(reportMonthIndex>=max);
+    document.getElementById('rep-next').disabled=(reportMonthIndex<=0);
+    const {monthKey,history,pastResult}=getReportData();
+    document.getElementById('rep-month-label').textContent=formatMonthKey(monthKey);
+    if (pastResult) { renderPastReports(pastResult); return; }
+    const byDate={};
+    (history||[]).forEach(({kid,ts})=>{const d=ts.split('T')[0];if(!byDate[d])byDate[d]={};byDate[d][kid]=(byDate[d][kid]||0)+1;});
+    const now=new Date(), mPfx=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`, dates=[];
+    for(let d=1;d<=now.getDate();d++) dates.push(`${mPfx}-${String(d).padStart(2,'0')}`);
+    const maxVal=Math.max(1,...dates.map(dt=>KIDS.reduce((s,k)=>s+(byDate[dt]?.[k]??0),0)));
+    drawChart(dates,byDate,maxVal);
+    document.getElementById('chart-legend').innerHTML=KIDS.map(k=>`<div class="legend-item"><div class="legend-dot" style="background:${COLOR_HEX[k]??'#888'}"></div><span>${escHtml(k)}</span></div>`).join('');
+    document.getElementById('stats-grid').innerHTML=KIDS.map(kid=>{
+      const {amount=0,swears=0}=state.kids[kid]??{};
+      let worstDay=null,worstCount=0;
+      Object.entries(byDate).forEach(([dt,d])=>{const c=d[kid]??0;if(c>worstCount){worstCount=c;worstDay=dt;}});
+      const wl=worstDay?`Worst: ${MONTHS[parseInt(worstDay.split('-')[1])-1].slice(0,3)} ${parseInt(worstDay.split('-')[2])} (${worstCount})`:'No swears yet!';
+      return `<div class="stat-card" style="--c:${COLOR_HEX[kid]??'#888'}"><div class="stat-name">${escHtml(kid)}</div><div class="stat-swears">${swears}</div><div class="stat-label">swear${swears!==1?'s':''} = $${amount}</div><div class="stat-worst">${wl}</div></div>`;
     }).join('');
   }
-
   function renderPastReports(r) {
-    // No daily data for past months, show totals
-    const allKids = Object.keys(r.kids);
-
-    // Clear chart and draw a summary bar per person instead
-    const byDate = {};
-    const allNames = allKids.join('_total');
-    // Use a simple total-per-person "single bar" visualization
-    const totals = Object.fromEntries(allKids.map(k => [k, r.kids[k]?.swears ?? 0]));
-    const maxVal  = Math.max(1, ...Object.values(totals));
-
-    // Draw horizontal-style totals in the canvas
-    drawTotalsChart(allKids, totals, maxVal);
-
-    document.getElementById('chart-legend').innerHTML = allKids.map(k => `
-      <div class="legend-item">
-        <div class="legend-dot" style="background:${COLOR_HEX[k]??'#888'}"></div>
-        <span>${escHtml(k)}: ${r.kids[k]?.swears??0} swears</span>
-      </div>`).join('');
-
-    document.getElementById('stats-grid').innerHTML = allKids.map(kid => {
-      const { amount=0, swears=0 } = r.kids[kid] ?? {};
-      const isWinner = (r.winners ?? [r.winner]).includes(kid);
-      return `
-        <div class="stat-card" style="--c:${COLOR_HEX[kid]??'#888'}">
-          <div class="stat-name">${escHtml(kid)} ${isWinner?'🏆':''}</div>
-          <div class="stat-swears">${swears}</div>
-          <div class="stat-label">swear${swears!==1?'s':''} = $${amount}</div>
-        </div>`;
+    const allKids=Object.keys(r.kids);
+    const totals=Object.fromEntries(allKids.map(k=>[k,r.kids[k]?.swears??0]));
+    const maxVal=Math.max(1,...Object.values(totals));
+    drawTotalsChart(allKids,totals,maxVal);
+    document.getElementById('chart-legend').innerHTML=allKids.map(k=>`<div class="legend-item"><div class="legend-dot" style="background:${COLOR_HEX[k]??'#888'}"></div><span>${escHtml(k)}: ${r.kids[k]?.swears??0} swears</span></div>`).join('');
+    document.getElementById('stats-grid').innerHTML=allKids.map(kid=>{
+      const {amount=0,swears=0}=r.kids[kid]??{};
+      const isW=(r.winners??[r.winner]).includes(kid);
+      return `<div class="stat-card" style="--c:${COLOR_HEX[kid]??'#888'}"><div class="stat-name">${escHtml(kid)} ${isW?'🏆':''}</div><div class="stat-swears">${swears}</div><div class="stat-label">swear${swears!==1?'s':''} = $${amount}</div></div>`;
     }).join('');
   }
-
-  // ── Canvas helpers ──
-  function rrect(ctx, x, y, w, h, r) {
-    r = Math.min(r, h/2, w/2);
-    ctx.beginPath();
-    ctx.moveTo(x+r, y);
-    ctx.lineTo(x+w-r, y);
-    ctx.quadraticCurveTo(x+w, y, x+w, y+r);
-    ctx.lineTo(x+w, y+h);
-    ctx.lineTo(x, y+h);
-    ctx.lineTo(x, y+r);
-    ctx.quadraticCurveTo(x, y, x+r, y);
-    ctx.closePath();
-  }
-
-  function drawChart(dates, byDate, maxVal) {
-    const canvas = document.getElementById('report-canvas');
-    const dpr  = window.devicePixelRatio || 1;
-    const W    = canvas.offsetWidth  || 320;
-    const H    = canvas.offsetHeight || 180;
-    canvas.width  = W * dpr;
-    canvas.height = H * dpr;
-    const ctx  = canvas.getContext('2d');
-    ctx.scale(dpr, dpr);
-
-    const pad = { top:14, right:10, bottom:28, left:26 };
-    const cW  = W - pad.left - pad.right;
-    const cH  = H - pad.top  - pad.bottom;
-
-    ctx.clearRect(0, 0, W, H);
-
-    if (!dates.length) {
-      ctx.fillStyle = 'rgba(255,255,255,0.3)';
-      ctx.font = '13px -apple-system, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('No swears yet this month 😇', W/2, H/2);
-      return;
-    }
-
-    // Grid
-    const steps = Math.min(maxVal, 5);
-    for (let s = 0; s <= steps; s++) {
-      const v = Math.round((s / steps) * maxVal);
-      const y = pad.top + cH - (v / maxVal) * cH;
-      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-      ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
-      if (s > 0) {
-        ctx.fillStyle = 'rgba(255,255,255,0.3)';
-        ctx.font = `10px -apple-system, sans-serif`;
-        ctx.textAlign = 'right';
-        ctx.fillText(v, pad.left - 4, y + 4);
-      }
-    }
-
-    const barW = Math.max(5, Math.floor(cW / dates.length * 0.68));
-    const step = cW / dates.length;
-
-    dates.forEach((date, i) => {
-      const x       = pad.left + i * step + (step - barW) / 2;
-      const dayData = byDate[date] || {};
-      let yOff      = pad.top + cH;
-      let totalDay  = KIDS.reduce((s,k) => s + (dayData[k]??0), 0);
-      if (totalDay === 0) return;
-
-      KIDS.forEach(kid => {
-        const count = dayData[kid] ?? 0;
-        if (!count) return;
-        const bH = (count / maxVal) * cH;
-        yOff -= bH;
-        ctx.fillStyle = COLOR_HEX[kid] ?? '#888';
-        rrect(ctx, x, yOff, barW, bH, 3);
-        ctx.fill();
-      });
-
-      const dayNum  = parseInt(date.split('-')[2]);
-      const showLbl = dates.length <= 16 || dayNum % Math.ceil(dates.length / 16) === 0 || dayNum === 1;
-      if (showLbl) {
-        ctx.fillStyle  = 'rgba(255,255,255,0.35)';
-        ctx.font       = `10px -apple-system, sans-serif`;
-        ctx.textAlign  = 'center';
-        ctx.fillText(dayNum, x + barW/2, H - 8);
-      }
-    });
-  }
-
-  function drawTotalsChart(kids, totals, maxVal) {
-    const canvas = document.getElementById('report-canvas');
-    const dpr = window.devicePixelRatio || 1;
-    const W   = canvas.offsetWidth  || 320;
-    const H   = canvas.offsetHeight || 180;
-    canvas.width  = W * dpr;
-    canvas.height = H * dpr;
-    const ctx = canvas.getContext('2d');
-    ctx.scale(dpr, dpr);
-
-    const pad = { top:14, right:10, bottom:28, left:26 };
-    const cW  = W - pad.left - pad.right;
-    const cH  = H - pad.top  - pad.bottom;
-    ctx.clearRect(0,0,W,H);
-
-    // Grid
-    const steps = Math.min(maxVal, 5);
-    for (let s = 0; s <= steps; s++) {
-      const v = Math.round((s/steps)*maxVal);
-      const y = pad.top + cH - (v/maxVal)*cH;
-      ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(pad.left,y); ctx.lineTo(W-pad.right,y); ctx.stroke();
-      if (s > 0) {
-        ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '10px -apple-system,sans-serif'; ctx.textAlign = 'right';
-        ctx.fillText(v, pad.left-4, y+4);
-      }
-    }
-
-    const barW = Math.max(16, Math.floor(cW / kids.length * 0.55));
-    const step = cW / kids.length;
-
-    kids.forEach((kid, i) => {
-      const count = totals[kid] ?? 0;
-      const x = pad.left + i * step + (step - barW) / 2;
-      const bH = (count / maxVal) * cH;
-      const y  = pad.top + cH - bH;
-      ctx.fillStyle = COLOR_HEX[kid] ?? '#888';
-      rrect(ctx, x, y, barW, Math.max(bH, 2), 4);
-      ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,0.35)';
-      ctx.font = '10px -apple-system,sans-serif'; ctx.textAlign = 'center';
-      ctx.fillText(kid.slice(0,4), x + barW/2, H - 8);
-    });
-  }
+  function rrect(ctx,x,y,w,h,r){r=Math.min(r,h/2,w/2);ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h);ctx.lineTo(x,y+h);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();}
+  function setupCanvas(id){const c=document.getElementById(id),dpr=window.devicePixelRatio||1,W=c.offsetWidth||320,H=c.offsetHeight||180;c.width=W*dpr;c.height=H*dpr;const ctx=c.getContext('2d');ctx.scale(dpr,dpr);return{ctx,W,H};}
+  function drawGrid(ctx,W,H,pad,maxVal){const cH=H-pad.top-pad.bottom,steps=Math.min(maxVal,5);for(let s=0;s<=steps;s++){const v=Math.round((s/steps)*maxVal),y=pad.top+cH-(v/maxVal)*cH;ctx.strokeStyle='rgba(255,255,255,0.06)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(W-pad.right,y);ctx.stroke();if(s>0){ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font='10px -apple-system,sans-serif';ctx.textAlign='right';ctx.fillText(v,pad.left-4,y+4);}}}
+  function drawChart(dates,byDate,maxVal){const{ctx,W,H}=setupCanvas('report-canvas');const pad={top:14,right:10,bottom:28,left:26},cW=W-pad.left-pad.right,cH=H-pad.top-pad.bottom;ctx.clearRect(0,0,W,H);if(!dates.length){ctx.fillStyle='rgba(255,255,255,0.3)';ctx.font='13px -apple-system,sans-serif';ctx.textAlign='center';ctx.fillText('No swears yet 😇',W/2,H/2);return;}drawGrid(ctx,W,H,pad,maxVal);const barW=Math.max(5,Math.floor(cW/dates.length*0.68)),step=cW/dates.length;dates.forEach((date,i)=>{const x=pad.left+i*step+(step-barW)/2,dayData=byDate[date]||{};if(!KIDS.reduce((s,k)=>s+(dayData[k]??0),0))return;let yOff=pad.top+cH;KIDS.forEach(kid=>{const count=dayData[kid]??0;if(!count)return;const bH=(count/maxVal)*cH;yOff-=bH;ctx.fillStyle=COLOR_HEX[kid]??'#888';rrect(ctx,x,yOff,barW,bH,3);ctx.fill();});const dn=parseInt(date.split('-')[2]),show=dates.length<=16||dn%Math.ceil(dates.length/16)===0||dn===1;if(show){ctx.fillStyle='rgba(255,255,255,0.35)';ctx.font='10px -apple-system,sans-serif';ctx.textAlign='center';ctx.fillText(dn,x+barW/2,H-8);}});}
+  function drawTotalsChart(kids,totals,maxVal){const{ctx,W,H}=setupCanvas('report-canvas');const pad={top:14,right:10,bottom:28,left:26},cW=W-pad.left-pad.right,cH=H-pad.top-pad.bottom;ctx.clearRect(0,0,W,H);drawGrid(ctx,W,H,pad,maxVal);const barW=Math.max(16,Math.floor(cW/kids.length*0.55)),step=cW/kids.length;kids.forEach((kid,i)=>{const count=totals[kid]??0,x=pad.left+i*step+(step-barW)/2,bH=(count/maxVal)*cH,y=pad.top+cH-bH;ctx.fillStyle=COLOR_HEX[kid]??'#888';rrect(ctx,x,y,barW,Math.max(bH,2),4);ctx.fill();ctx.fillStyle='rgba(255,255,255,0.35)';ctx.font='10px -apple-system,sans-serif';ctx.textAlign='center';ctx.fillText(kid.slice(0,4),x+barW/2,H-8);});}
 
   // ══════════════════════════════════════════════════════
-  //  SETTINGS
+  //  SETTINGS — JAR PEOPLE
   // ══════════════════════════════════════════════════════
   function renderSettings() {
-    document.getElementById('settings-list').innerHTML = settings.map((s, i) => `
-      <div class="settings-card" data-idx="${i}">
+    document.getElementById('settings-list').innerHTML = settings.map((s,i)=>`
+      <div class="settings-card" style="margin-bottom:10px" data-idx="${i}">
         <div class="settings-row-top">
-          <div class="settings-slot-emoji">${SLOT_EMOJI[i] ?? '🧒'}</div>
+          <div class="settings-slot-emoji">${SLOT_EMOJI[i]??'🧒'}</div>
           <input class="settings-name-input" type="text" value="${escHtml(s.name)}"
             placeholder="Name" maxlength="20" data-field="name" data-idx="${i}" />
           <div class="settings-color-wrap">
@@ -923,101 +807,134 @@
             <input class="settings-color-input" type="color" value="${s.color}" data-field="color" data-idx="${i}"
               oninput="document.getElementById('swatch-${i}').style.background=this.value" />
           </div>
-          ${settings.length > 1
-            ? `<button class="settings-delete-btn" onclick="deleteSettingsRow(${i})" title="Remove">×</button>`
-            : `<div style="width:30px"></div>`}
+          ${settings.length>1
+            ?`<button class="settings-delete-btn" onclick="deleteSettingsRow(${i})">×</button>`
+            :`<div style="width:30px"></div>`}
         </div>
         <div class="settings-row-pay">
           <div class="settings-pay-icon">💳</div>
-          <input class="settings-pay-input" type="text"
-            value="${escHtml(s.paymentInfo ?? '')}"
+          <input class="settings-pay-input" type="text" value="${escHtml(s.paymentInfo??'')}"
             placeholder="Apple Pay phone, Venmo @handle, CashApp $tag…"
             maxlength="80" data-field="pay" data-idx="${i}" />
         </div>
       </div>`).join('');
+    renderAppUsers();
   }
 
   function addSettingsRow() {
-    if (settings.length >= 10) { toast('Max 10 people!'); return; }
-    settings.push({ name:`Person ${settings.length + 1}`, color: PALETTE[settings.length % PALETTE.length], paymentInfo:'' });
+    if (settings.length>=10){toast('Max 10 people!');return;}
+    settings.push({name:`Person ${settings.length+1}`,color:PALETTE[settings.length%PALETTE.length],paymentInfo:''});
     renderSettings();
-    document.getElementById('settings-list').lastElementChild
-      ?.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    document.getElementById('settings-list').lastElementChild?.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+  function deleteSettingsRow(idx) {
+    if (settings.length<=1) return;
+    settings.splice(idx,1); renderSettings(); toast('Person removed');
+  }
+  function saveSettingsFromForm() {
+    document.querySelectorAll('.settings-name-input').forEach((inp,i)=>{settings[i].name=inp.value.trim()||`Person ${i+1}`;});
+    document.querySelectorAll('.settings-color-input').forEach((inp,i)=>{settings[i].color=inp.value;});
+    document.querySelectorAll('.settings-pay-input').forEach((inp,i)=>{settings[i].paymentInfo=inp.value.trim();});
+    const oldKids=[...KIDS];
+    saveSettings(settings);
+    KIDS     =settings.map(s=>s.name);
+    COLORS   =Object.fromEntries(settings.map(s=>[s.name,s.color]));
+    COLOR_HEX=Object.fromEntries(settings.map(s=>[s.name,s.color]));
+    EMOJI    =Object.fromEntries(settings.map((s,i)=>[s.name,SLOT_EMOJI[i]??'🧒']));
+    PAY_INFO =Object.fromEntries(settings.map(s=>[s.name,s.paymentInfo??'']));
+    const ns={kids:{},history:state.history,monthlyResults:state.monthlyResults};
+    KIDS.forEach((name,i)=>{const on=oldKids[i];ns.kids[name]=(on&&state.kids[on])?state.kids[on]:(state.kids[name]??{amount:0,swears:0});});
+    state=ns; save(); renderSettings(); render(); toast('Settings saved! ✅');
   }
 
-  function deleteSettingsRow(idx) {
-    if (settings.length <= 1) return;
-    const name = settings[idx].name;
-    settings.splice(idx, 1);
-    renderSettings();
+  // ══════════════════════════════════════════════════════
+  //  SETTINGS — APP USERS
+  // ══════════════════════════════════════════════════════
+  function renderAppUsers() {
+    document.getElementById('users-list').innerHTML = appUsers.map((u,i)=>{
+      const color=userColor(u.name), emoji=userEmoji(u.name,i);
+      const isJar=KIDS.includes(u.name);
+      return `
+        <div class="user-tag-row">
+          <div class="user-tag-left">
+            <div class="user-tag-dot" style="background:${color}"></div>
+            <div>
+              <div class="user-tag-name">${escHtml(u.name)}</div>
+              <div class="user-tag-label">${isJar?'in the jar · can log swears':'can log swears'}</div>
+            </div>
+          </div>
+          <button class="user-tag-del" onclick="removeAppUser(${i})">×</button>
+        </div>`;
+    }).join('') || `<div style="color:var(--muted);font-size:13px;padding:8px 0">No users yet — add some below</div>`;
+  }
+
+  function addAppUser() {
+    const inp=document.getElementById('new-user-input');
+    const name=inp.value.trim();
+    if (!name){toast('Enter a name first');return;}
+    if (appUsers.some(u=>u.name.toLowerCase()===name.toLowerCase())){toast('Already in the list!');return;}
+    appUsers.push({name});
+    saveAppUsers(appUsers);
+    inp.value='';
+    renderAppUsers();
+    toast(`Added ${name} 👤`);
+  }
+
+  function removeAppUser(idx) {
+    const name=appUsers[idx]?.name;
+    appUsers.splice(idx,1);
+    saveAppUsers(appUsers);
+    renderAppUsers();
     toast(`Removed ${name}`);
   }
 
-  function saveSettingsFromForm() {
-    const nameInputs = document.querySelectorAll('.settings-name-input');
-    const colorInputs= document.querySelectorAll('.settings-color-input');
-    const payInputs  = document.querySelectorAll('.settings-pay-input');
-    const oldKids    = [...KIDS];
-
-    nameInputs.forEach((inp,i)  => { settings[i].name        = inp.value.trim() || `Person ${i+1}`; });
-    colorInputs.forEach((inp,i) => { settings[i].color       = inp.value; });
-    payInputs.forEach((inp,i)   => { settings[i].paymentInfo = inp.value.trim(); });
-
-    saveSettings(settings);
-
-    KIDS      = settings.map(s => s.name);
-    COLORS    = Object.fromEntries(settings.map(s => [s.name, s.color]));
-    COLOR_HEX = Object.fromEntries(settings.map(s => [s.name, s.color]));
-    EMOJI     = Object.fromEntries(settings.map((s,i) => [s.name, SLOT_EMOJI[i] ?? '🧒']));
-    PAY_INFO  = Object.fromEntries(settings.map(s => [s.name, s.paymentInfo ?? '']));
-
-    const newState = { kids:{}, history:state.history, monthlyResults:state.monthlyResults };
-    KIDS.forEach((name,i) => {
-      const oldName = oldKids[i];
-      newState.kids[name] = (oldName && state.kids[oldName])
-        ? state.kids[oldName]
-        : (state.kids[name] ?? { amount:0, swears:0 });
+  // Keep app users in sync with jar members: if a jar member isn't in users, add them
+  function syncUsersWithJar() {
+    let changed=false;
+    KIDS.forEach(name=>{
+      if (!appUsers.some(u=>u.name===name)){appUsers.push({name});changed=true;}
     });
-    state = newState;
-    save();
-    renderSettings();
-    render();
-    toast('Settings saved! ✅');
+    if (changed) saveAppUsers(appUsers);
   }
 
   // ══════════════════════════════════════════════════════
   //  NAVIGATION
   // ══════════════════════════════════════════════════════
   function switchView(v) {
-    document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(el=>el.classList.remove('active'));
     document.getElementById(`view-${v}`).classList.add('active');
     document.getElementById(`tab-${v}`).classList.add('active');
-    if (v === 'history')  renderHistory();
-    if (v === 'settings') renderSettings();
-    if (v === 'reports')  { reportMonthIndex = 0; renderReports(); }
+    if (v==='history')  renderHistory();
+    if (v==='settings') renderSettings();
+    if (v==='reports')  {reportMonthIndex=0;renderReports();}
   }
 
   // ══════════════════════════════════════════════════════
   //  TOAST
   // ══════════════════════════════════════════════════════
   let _tt;
-  function toast(msg) {
-    const el = document.getElementById('toast');
-    el.textContent = msg; el.classList.add('show');
-    clearTimeout(_tt); _tt = setTimeout(() => el.classList.remove('show'), 2500);
-  }
+  function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),2500);}
 
   // ══════════════════════════════════════════════════════
   //  SERVICE WORKER
   // ══════════════════════════════════════════════════════
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
-  }
+  if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(()=>{}); }
 
   // ══════════════════════════════════════════════════════
   //  INIT
   // ══════════════════════════════════════════════════════
+  syncUsersWithJar();
+
+  if (currentUser) {
+    // Already logged in this session
+    document.getElementById('login-screen').classList.add('hidden');
+    updateUserChip();
+  } else {
+    // Show login
+    renderLoginScreen();
+  }
+
   render();
   </script>
 </body>
