@@ -9,6 +9,8 @@
   <meta name="theme-color" content="#0d0d1a" />
   <link rel="manifest" href="manifest.json" />
   <title>Swear Jar 🤐</title>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -313,6 +315,64 @@
     @keyframes pulse { 0%{transform:scale(1)} 50%{transform:scale(1.06)} 100%{transform:scale(1)} }
     .pulse { animation: pulse .2s ease; }
     @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+
+    /* ════════ LOADING OVERLAY (Firebase sync) ════════ */
+    .loading-overlay {
+      position: fixed; inset: 0; z-index: 800;
+      background: var(--bg);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    }
+    .loading-overlay.hidden { display: none; }
+    .loading-spinner { font-size: 52px; animation: spin 1s linear infinite; }
+    .loading-title   { font-size: 22px; font-weight: 900; }
+    .loading-sub     { font-size: 14px; color: var(--muted); text-align: center; padding: 0 32px; max-width: 320px; }
+
+    /* ════════ SYNC DOT (header) ════════ */
+    .sync-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; display: none; }
+    .sync-dot.on    { display: block; background: #00c851; box-shadow: 0 0 5px #00c851; }
+    .sync-dot.off   { display: block; background: #ff4444; }
+    .sync-dot.local { display: block; background: #ffa726; }
+
+    /* ════════ DB SETTINGS CARD ════════ */
+    .db-card { background: var(--surface); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+    .db-status-row  { display: flex; align-items: center; gap: 8px; }
+    .db-status-dot  { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; background: #888; }
+    .db-status-dot.connected    { background: #00c851; box-shadow: 0 0 6px #00c851; }
+    .db-status-dot.disconnected { background: #ff4444; }
+    .db-status-dot.local        { background: #ffa726; }
+    .db-status-text { font-size: 12px; color: var(--muted); font-weight: 600; }
+    .fb-config-input {
+      width: 100%; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 12px; color: var(--text); font-size: 11px;
+      font-family: monospace; resize: vertical; min-height: 88px;
+      outline: none; -webkit-appearance: none; line-height: 1.6;
+    }
+    .fb-config-input:focus { border-color: var(--purple); }
+    .db-btn-row { display: flex; gap: 8px; }
+    .btn-db-save {
+      flex: 1; padding: 12px; border: none; border-radius: 13px;
+      background: linear-gradient(135deg, var(--purple), var(--pink));
+      color: #fff; font-size: 14px; font-weight: 700; cursor: pointer; -webkit-appearance: none;
+    }
+    .btn-db-save:active { opacity: .85; }
+    .btn-db-clear {
+      padding: 12px 14px; border: none; border-radius: 13px;
+      background: rgba(255,68,68,.12); color: #ff6b6b;
+      font-size: 13px; font-weight: 600; cursor: pointer; -webkit-appearance: none;
+    }
+    .btn-db-clear:active { background: rgba(255,68,68,.25); }
+    .db-hint { font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+    /* ════════ ACTIVITY DELETE ════════ */
+    .activity-del-btn {
+      width: 28px; height: 28px; border-radius: 8px; border: none;
+      background: rgba(255,68,68,.12); color: #ff6b6b; font-size: 13px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      padding: 0; flex-shrink: 0; -webkit-appearance: none;
+    }
+    .activity-del-btn:active { background: rgba(255,68,68,.3); }
+    .activity-row.deleted-log { opacity: 0.65; }
+    .activity-badge.deleted { background: rgba(255,68,68,.15); color: #ff6b6b; }
   </style>
 </head>
 <body>
@@ -334,6 +394,13 @@
     </div>
   </div>
 
+  <!-- ═══════════ LOADING OVERLAY (Firebase sync) ═══════════ -->
+  <div id="loading-overlay" class="loading-overlay hidden">
+    <div class="loading-spinner">🔄</div>
+    <div class="loading-title">Syncing…</div>
+    <div class="loading-sub" id="loading-sub-text">Fetching the latest data ☁️</div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
   <!-- ═══════════ TRACKER ═══════════ -->
@@ -343,6 +410,7 @@
         <div class="app-title">🤐 Swear Jar</div>
         <div class="header-meta">
           <div class="month-chip" id="month-chip">—</div>
+          <div class="sync-dot" id="sync-dot" title="Sync status"></div>
           <button class="user-chip" id="user-chip" onclick="promptSwitchUser()">
             <div class="user-chip-dot" id="user-chip-dot" style="background:#888"></div>
             <span id="user-chip-name">—</span>
@@ -415,6 +483,22 @@
         <button class="user-add-btn" onclick="addAppUser()">+ Add</button>
       </div>
 
+      <div class="settings-section-label" style="margin-top:8px">Firebase Sync</div>
+      <div class="settings-section-hint">Paste your Firebase Realtime Database config to sync swear data across all devices in real time. Get it from Firebase Console → Project Settings → Your Apps.</div>
+      <div class="db-card">
+        <div class="db-status-row">
+          <div class="db-status-dot local" id="db-status-dot"></div>
+          <div class="db-status-text" id="db-status-text">Local only — no Firebase config</div>
+        </div>
+        <textarea id="firebase-config-input" class="fb-config-input"
+          placeholder='{"apiKey":"...","authDomain":"...","databaseURL":"https://your-project-default-rtdb.firebaseio.com","projectId":"...","storageBucket":"...","messagingSenderId":"...","appId":"..."}' rows="4"></textarea>
+        <div class="db-hint">💡 Only the <strong>databaseURL</strong> field is required for real-time sync. Paste the full config object from Firebase Console.</div>
+        <div class="db-btn-row">
+          <button class="btn-db-save" onclick="saveFbConfigFromForm()">💾 Save &amp; Connect</button>
+          <button class="btn-db-clear" onclick="clearFbConfig()">✕ Disconnect</button>
+        </div>
+      </div>
+
       <div class="settings-section-label" style="margin-top:8px">Save</div>
       <button class="btn-settings-save" onclick="saveSettingsFromForm()">Save Changes</button>
     </div>
@@ -446,6 +530,214 @@
 
   <script>
   // ══════════════════════════════════════════════════════
+  //  FIREBASE REAL-TIME SYNC
+  // ══════════════════════════════════════════════════════
+  const FB_CONFIG_KEY = 'swearjar2-firebase';
+  let fbDb = null, fbConnected = false, fbFirstLoadDone = false, _fbSyncTimeout = null;
+
+  function loadFbConfig() {
+    try { const s = localStorage.getItem(FB_CONFIG_KEY); return s ? JSON.parse(s) : null; } catch(e) { return null; }
+  }
+  function saveFbConfig(cfg) { localStorage.setItem(FB_CONFIG_KEY, JSON.stringify(cfg)); }
+
+  function fbToArray(val) {
+    if (!val) return [];
+    if (Array.isArray(val)) return val;
+    return Object.keys(val).sort((a,b) => parseInt(a) - parseInt(b)).map(k => val[k]);
+  }
+
+  function showLoadingOverlay(msg) {
+    document.getElementById('loading-sub-text').textContent = msg || 'Fetching the latest data ☁️';
+    document.getElementById('loading-overlay').classList.remove('hidden');
+  }
+  function hideLoadingOverlay() {
+    document.getElementById('loading-overlay').classList.add('hidden');
+  }
+
+  function updateDbStatus() {
+    const dot  = document.getElementById('db-status-dot');
+    const txt  = document.getElementById('db-status-text');
+    const sdot = document.getElementById('sync-dot');
+    if (!dot) return;
+    if (!fbDb) {
+      dot.className  = 'db-status-dot local';
+      txt.textContent = 'Local only — paste a Firebase config to sync';
+      if (sdot) sdot.className = 'sync-dot local';
+    } else if (fbConnected) {
+      dot.className  = 'db-status-dot connected';
+      txt.textContent = 'Connected — syncing in real time ✓';
+      if (sdot) sdot.className = 'sync-dot on';
+    } else {
+      dot.className  = 'db-status-dot disconnected';
+      txt.textContent = 'Disconnected — showing last known data';
+      if (sdot) sdot.className = 'sync-dot off';
+    }
+  }
+
+  function applySettingsData(newSettings) {
+    settings  = newSettings;
+    KIDS      = settings.map(s => s.name);
+    COLORS    = Object.fromEntries(settings.map(s => [s.name, s.color]));
+    COLOR_HEX = Object.fromEntries(settings.map(s => [s.name, s.color]));
+    EMOJI     = Object.fromEntries(settings.map((s,i) => [s.name, SLOT_EMOJI[i] ?? '🧒']));
+    PAY_INFO  = Object.fromEntries(settings.map(s => [s.name, s.paymentInfo ?? '']));
+  }
+
+  function initFirebase(config) {
+    try {
+      const existingApps = typeof firebase !== 'undefined' ? firebase.apps : [];
+      const app = existingApps.length ? existingApps[0] : firebase.initializeApp(config);
+      fbDb = firebase.database(app);
+
+      // Connection health
+      fbDb.ref('.info/connected').on('value', snap => {
+        fbConnected = !!snap.val();
+        updateDbStatus();
+      });
+
+      // Fallback: hide overlay after 8s if Firebase never responds
+      _fbSyncTimeout = setTimeout(() => {
+        if (!fbFirstLoadDone) {
+          fbFirstLoadDone = true;
+          hideLoadingOverlay();
+          toast('⚠️ Sync timeout — showing local data');
+        }
+      }, 8000);
+
+      // Settings listener
+      fbDb.ref('/swearjar/jarSettings').on('value', snap => {
+        const raw = snap.val();
+        if (raw) {
+          const ns = fbToArray(raw).map(x => ({ paymentInfo:'', ...x })).filter(x => x.name);
+          if (ns.length > 0) {
+            applySettingsData(ns);
+            localStorage.setItem('swearjar2-settings', JSON.stringify(settings));
+            syncUsersWithJar();
+          }
+        }
+      });
+
+      // App users listener
+      fbDb.ref('/swearjar/appUsers').on('value', snap => {
+        const raw = snap.val();
+        if (raw) {
+          const nu = fbToArray(raw).filter(x => x && x.name);
+          appUsers = nu;
+          localStorage.setItem('swearjar2-users', JSON.stringify(appUsers));
+          const loginEl = document.getElementById('login-screen');
+          if (loginEl && !loginEl.classList.contains('hidden')) renderLoginScreen();
+          if (document.getElementById('view-settings').classList.contains('active')) renderAppUsers();
+        }
+      });
+
+      // Game state listener — primary driver
+      fbDb.ref('/swearjar/gameState').on('value', snap => {
+        const raw = snap.val();
+        if (raw) {
+          const incoming = {
+            kids: raw.kids || {},
+            history: fbToArray(raw.history),
+            monthlyResults: fbToArray(raw.monthlyResults)
+          };
+          incoming.monthlyResults.forEach(r => {
+            if (!r.winners && r.winner) { r.winners = [r.winner]; delete r.winner; }
+          });
+          state = incoming;
+          localStorage.setItem('swearjar2', JSON.stringify(state));
+        } else if (!fbFirstLoadDone) {
+          // No remote data yet — seed Firebase with local state
+          fbSave(); fbSaveSettings(settings); fbSaveUsers(appUsers);
+        }
+        if (!fbFirstLoadDone) {
+          fbFirstLoadDone = true;
+          clearTimeout(_fbSyncTimeout);
+          hideLoadingOverlay();
+        }
+        render();
+        const activeTab = document.querySelector('.nav-tab.active')?.id?.replace('tab-','');
+        if (activeTab === 'history') renderHistory();
+        if (activeTab === 'reports') renderReports();
+      });
+
+      return true;
+    } catch(e) {
+      console.error('Firebase init failed:', e);
+      fbFirstLoadDone = true;
+      clearTimeout(_fbSyncTimeout);
+      hideLoadingOverlay();
+      toast('⚠️ Firebase error — using local data');
+      updateDbStatus();
+      return false;
+    }
+  }
+
+  function fbSave()              { if (!fbDb) return; try { fbDb.ref('/swearjar/gameState').set(state); } catch(e) {} }
+  function fbSaveSettings(s)     { if (!fbDb) return; try { fbDb.ref('/swearjar/jarSettings').set(s); } catch(e) {} }
+  function fbSaveUsers(u)        { if (!fbDb) return; try { fbDb.ref('/swearjar/appUsers').set(u); } catch(e) {} }
+
+  function saveFbConfigFromForm() {
+    const raw = document.getElementById('firebase-config-input').value.trim();
+    if (!raw) { toast('Paste a Firebase config first'); return; }
+    try {
+      const cfg = JSON.parse(raw);
+      if (!cfg.databaseURL) { toast('❌ Missing "databaseURL" in config'); return; }
+      saveFbConfig(cfg);
+      showLoadingOverlay('Connecting to Firebase…');
+      setTimeout(() => window.location.reload(), 500);
+    } catch(e) { toast('❌ Invalid JSON — check your config'); }
+  }
+
+  function clearFbConfig() {
+    localStorage.removeItem(FB_CONFIG_KEY);
+    fbDb = null; fbConnected = false;
+    updateDbStatus();
+    const el = document.getElementById('firebase-config-input');
+    if (el) el.value = '';
+    toast('Disconnected from Firebase');
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  ACTIVITY DELETE (with audit log)
+  // ══════════════════════════════════════════════════════
+  function canDeleteEntry(entry) {
+    if (!currentUser) return false;
+    if (entry.type === 'deletion') return false;   // can't delete a deletion log
+    if (entry.addedBy === currentUser) return false; // can't delete your own recordings
+    if (entry.kid === currentUser) return false;     // can't delete fees assigned to you
+    return true;
+  }
+
+  function deleteActivity(idx) {
+    const entry = state.history[idx];
+    if (!entry || !canDeleteEntry(entry)) { toast('⛔ You can\'t delete this entry'); return; }
+    const { kid, addedBy, ts } = entry;
+
+    // Reverse the fee
+    if (state.kids[kid]) {
+      state.kids[kid].amount = Math.max(0, state.kids[kid].amount - 1);
+      state.kids[kid].swears = Math.max(0, state.kids[kid].swears - 1);
+    }
+
+    // Remove the original entry
+    state.history.splice(idx, 1);
+
+    // Insert audit record at top of history
+    state.history.unshift({
+      type: 'deletion',
+      kid,
+      deletedBy: currentUser,
+      originalAddedBy: addedBy,
+      originalTs: ts,
+      ts: new Date().toISOString()
+    });
+
+    if (state.history.length > 500) state.history.length = 500;
+    save();
+    render();
+    toast(`🗑️ Deleted ${kid}'s entry`);
+  }
+
+  // ══════════════════════════════════════════════════════
   //  CONSTANTS
   // ══════════════════════════════════════════════════════
   const SLOT_EMOJI   = ['👧','🧒','👦','🧑','👩','👨','🧔','👱','🧕','👲'];
@@ -464,7 +756,7 @@
     try { const s = localStorage.getItem('swearjar2-settings'); if (s) return JSON.parse(s).map(x=>({paymentInfo:'',...x})); } catch(e) {}
     return DEFAULT_KIDS.map(k=>({...k}));
   }
-  function saveSettings(s) { localStorage.setItem('swearjar2-settings', JSON.stringify(s)); }
+  function saveSettings(s) { localStorage.setItem('swearjar2-settings', JSON.stringify(s)); fbSaveSettings(s); }
 
   let settings  = loadSettings();
   let KIDS      = settings.map(s => s.name);
@@ -479,7 +771,7 @@
     // Default: same as jar members
     return KIDS.map(name => ({ name }));
   }
-  function saveAppUsers(u) { localStorage.setItem('swearjar2-users', JSON.stringify(u)); }
+  function saveAppUsers(u) { localStorage.setItem('swearjar2-users', JSON.stringify(u)); fbSaveUsers(u); }
   let appUsers = loadAppUsers();
 
   // ── Current user (session only) ──
@@ -502,7 +794,7 @@
     } catch(e) {}
     return defaultState();
   }
-  function save() { localStorage.setItem('swearjar2', JSON.stringify(state)); }
+  function save() { localStorage.setItem('swearjar2', JSON.stringify(state)); fbSave(); }
   let state = load();
 
   // ══════════════════════════════════════════════════════
@@ -713,24 +1005,46 @@
           <button class="swear-btn" onclick="addSwear('${escHtml(kid)}')">🤬 +$1</button>
         </div>`;
     }).join('');
-    const recent=state.history.slice(0,12), actEl=document.getElementById('activity-list');
+    const recent=state.history.slice(0,20), actEl=document.getElementById('activity-list');
     if (!recent.length) {
       actEl.innerHTML=`<div class="empty"><div class="empty-icon">😇</div><div>No swears yet this month!</div></div>`;
     } else {
-      actEl.innerHTML = recent.map(({kid,ts,addedBy})=>`
-        <div class="activity-row" style="--c:${COLORS[kid]??'#888'}">
-          <div class="activity-left">
-            <div class="activity-dot"></div>
-            <div class="activity-info">
-              <div class="activity-name">${escHtml(kid)}</div>
-              ${addedBy ? `<div class="activity-by">recorded by ${escHtml(addedBy)}</div>` : ''}
+      actEl.innerHTML = recent.map((entry, idx) => {
+        if (entry.type === 'deletion') {
+          // Audit log row for a deletion
+          return `
+            <div class="activity-row deleted-log" style="--c:${COLORS[entry.kid]??'#888'}">
+              <div class="activity-left">
+                <div class="activity-dot" style="opacity:0.5"></div>
+                <div class="activity-info">
+                  <div class="activity-name" style="text-decoration:line-through;opacity:0.65">${escHtml(entry.kid)}</div>
+                  <div class="activity-by">🗑️ deleted by ${escHtml(entry.deletedBy)} · was recorded by ${escHtml(entry.originalAddedBy)}</div>
+                </div>
+              </div>
+              <div class="activity-right">
+                <div class="activity-time">${relativeTime(entry.ts)}</div>
+                <div class="activity-badge deleted">-$1</div>
+              </div>
+            </div>`;
+        }
+        const {kid,ts,addedBy} = entry;
+        const canDel = canDeleteEntry(entry);
+        return `
+          <div class="activity-row" style="--c:${COLORS[kid]??'#888'}">
+            <div class="activity-left">
+              <div class="activity-dot"></div>
+              <div class="activity-info">
+                <div class="activity-name">${escHtml(kid)}</div>
+                ${addedBy ? `<div class="activity-by">recorded by ${escHtml(addedBy)}</div>` : ''}
+              </div>
             </div>
-          </div>
-          <div class="activity-right">
-            <div class="activity-time">${relativeTime(ts)}</div>
-            <div class="activity-badge">+$1</div>
-          </div>
-        </div>`).join('');
+            <div class="activity-right">
+              <div class="activity-time">${relativeTime(ts)}</div>
+              <div class="activity-badge">+$1</div>
+              ${canDel ? `<button class="activity-del-btn" onclick="deleteActivity(${idx})" title="Delete this entry">🗑️</button>` : ''}
+            </div>
+          </div>`;
+      }).join('');
     }
   }
 
@@ -845,6 +1159,14 @@
         </div>
       </div>`).join('');
     renderAppUsers();
+
+    // Firebase config section
+    updateDbStatus();
+    const existingCfg = loadFbConfig();
+    const cfgEl = document.getElementById('firebase-config-input');
+    if (cfgEl && existingCfg && !cfgEl.value.trim()) {
+      cfgEl.value = JSON.stringify(existingCfg, null, 2);
+    }
   }
 
   function addSettingsRow() {
@@ -962,6 +1284,20 @@
   }
 
   render();
+
+  // Bootstrap Firebase (only after user is identified — login does a reload so
+  // by the time we reach here sessionStorage is already set if logged in)
+  const _fbCfg = loadFbConfig();
+  if (_fbCfg && currentUser) {
+    showLoadingOverlay('Fetching the latest data ☁️');
+    initFirebase(_fbCfg);
+  } else if (_fbCfg) {
+    // Config exists but not logged in yet — init quietly so connection is ready
+    try { initFirebase(_fbCfg); } catch(e) {}
+  } else {
+    // No Firebase config — show local-only dot subtly
+    updateDbStatus();
+  }
   </script>
 </body>
 </html>
