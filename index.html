@@ -13,18 +13,14 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:       #0d0d1a;
-      --surface:  #16172a;
-      --surface2: #1e2038;
-      --border:   rgba(255,255,255,0.07);
-      --text:     #ffffff;
-      --muted:    rgba(255,255,255,0.45);
-      --delaney:  #e91e8c;
-      --hadley:   #00c2e0;
-      --emerson:  #56c278;
-      --grant:    #ffa726;
-      --purple:   #7c4dff;
-      --pink:     #e91e8c;
+      --bg:      #0d0d1a;
+      --surface: #16172a;
+      --surface2:#1e2038;
+      --border:  rgba(255,255,255,0.07);
+      --text:    #ffffff;
+      --muted:   rgba(255,255,255,0.45);
+      --purple:  #7c4dff;
+      --pink:    #e91e8c;
     }
 
     body {
@@ -45,15 +41,10 @@
       padding: 16px 16px 14px;
       position: sticky; top: 0; z-index: 50;
     }
-    .header-row {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 14px;
-    }
+    .header-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .header-row-bare { display: flex; align-items: center; justify-content: space-between; }
     .app-title { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
-    .month-chip {
-      background: var(--surface2); border-radius: 20px; padding: 5px 13px;
-      font-size: 12px; color: var(--muted); font-weight: 600;
-    }
+    .month-chip { background: var(--surface2); border-radius: 20px; padding: 5px 13px; font-size: 12px; color: var(--muted); font-weight: 600; }
     .pot-card {
       background: linear-gradient(135deg, var(--purple), var(--pink));
       border-radius: 18px; padding: 14px 18px;
@@ -67,210 +58,205 @@
     .pot-leader-name { font-size: 15px; font-weight: 800; margin-top: 2px; }
 
     /* ── GRID ── */
-    .grid {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 12px; padding: 14px;
-    }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 14px; }
 
     /* ── KID CARD ── */
     .kid-card {
-      background: var(--surface);
-      border-radius: 22px;
+      background: var(--surface); border-radius: 22px;
       padding: 18px 14px 14px;
       display: flex; flex-direction: column; align-items: center; gap: 8px;
       position: relative; overflow: hidden;
-      border: 2px solid transparent;
-      transition: border-color .2s;
+      border: 2px solid transparent; transition: border-color .2s;
     }
     .kid-card.leading { border-color: gold; }
-    .kid-card::before {
-      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
-      background: var(--c);
-    }
-    .kid-crown {
-      position: absolute; top: 8px; right: 10px;
-      font-size: 16px; display: none;
-    }
-    .kid-card.leading .kid-crown { display: block; }
-    .kid-avatar {
-      width: 52px; height: 52px; border-radius: 50%;
-      background: var(--c); opacity: .18;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 26px; position: relative;
-    }
-    .kid-avatar-emoji {
-      position: absolute; font-size: 26px; opacity: 1;
-    }
-    .kid-name { font-size: 17px; font-weight: 700; }
+    .kid-card.worst   { border-color: #ff4444; }
+    .kid-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: var(--c); }
+    .kid-crown    { position: absolute; top: 8px; right: 10px; font-size: 16px; display: none; }
+    .kid-badmouth { position: absolute; top: 8px; left: 10px;  font-size: 16px; display: none; }
+    .kid-card.leading .kid-crown    { display: block; }
+    .kid-card.worst   .kid-badmouth { display: block; }
+    .kid-avatar { width: 52px; height: 52px; border-radius: 50%; background: var(--c); opacity: .18; display: flex; align-items: center; justify-content: center; font-size: 26px; position: relative; }
+    .kid-avatar-emoji { position: absolute; font-size: 26px; opacity: 1; }
+    .kid-name   { font-size: 17px; font-weight: 700; }
     .kid-amount { font-size: 34px; font-weight: 900; color: var(--c); line-height: 1; }
-    .kid-count { font-size: 11px; color: var(--muted); }
-    .swear-btn {
+    .kid-count  { font-size: 11px; color: var(--muted); }
+    .swear-btn  {
       margin-top: 4px; width: 100%; padding: 13px 8px;
       background: var(--c); border: none; border-radius: 14px;
       color: #fff; font-size: 15px; font-weight: 700;
-      cursor: pointer; transition: transform .1s, filter .1s;
-      -webkit-appearance: none;
+      cursor: pointer; transition: transform .1s, filter .1s; -webkit-appearance: none;
     }
     .swear-btn:active { transform: scale(.93); filter: brightness(.85); }
 
     /* ── ACTIONS ── */
-    .actions {
-      padding: 0 14px 14px;
-      display: flex; gap: 10px;
-    }
-    .btn {
-      flex: 1; padding: 14px 10px; border: none; border-radius: 15px;
-      font-size: 14px; font-weight: 700; cursor: pointer;
-      transition: transform .1s, opacity .1s; -webkit-appearance: none;
-    }
+    .actions { padding: 0 14px 14px; display: flex; gap: 10px; }
+    .btn { flex: 1; padding: 14px 10px; border: none; border-radius: 15px; font-size: 14px; font-weight: 700; cursor: pointer; transition: transform .1s, opacity .1s; -webkit-appearance: none; }
     .btn:active { transform: scale(.96); opacity: .8; }
     .btn-ghost { background: var(--surface2); color: var(--muted); }
     .btn-grad  { background: linear-gradient(135deg, var(--purple), var(--pink)); color: #fff; }
 
     /* ── ACTIVITY ── */
     .section { padding: 0 14px 14px; }
-    .section-header {
-      font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px;
-      color: var(--muted); margin-bottom: 10px;
-    }
+    .section-header { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 10px; }
     .activity-list { display: flex; flex-direction: column; gap: 8px; }
-    .activity-row {
-      background: var(--surface); border-radius: 13px;
-      padding: 11px 14px;
-      display: flex; align-items: center; justify-content: space-between;
-    }
+    .activity-row { background: var(--surface); border-radius: 13px; padding: 11px 14px; display: flex; align-items: center; justify-content: space-between; }
     .activity-left { display: flex; align-items: center; gap: 10px; }
-    .activity-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
+    .activity-dot  { width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
     .activity-name { font-weight: 600; font-size: 14px; }
     .activity-right { display: flex; align-items: center; gap: 12px; }
-    .activity-time { font-size: 11px; color: var(--muted); }
-    .activity-badge {
-      font-size: 12px; font-weight: 700;
-      background: rgba(233,30,140,.15); color: var(--pink);
-      border-radius: 8px; padding: 2px 8px;
-    }
-    .empty { text-align: center; padding: 30px 0; color: var(--muted); }
+    .activity-time  { font-size: 11px; color: var(--muted); }
+    .activity-badge { font-size: 12px; font-weight: 700; background: rgba(233,30,140,.15); color: var(--pink); border-radius: 8px; padding: 2px 8px; }
+    .empty      { text-align: center; padding: 30px 0; color: var(--muted); }
     .empty-icon { font-size: 40px; margin-bottom: 8px; }
 
     /* ── HISTORY VIEW ── */
     .history-list { padding: 14px; display: flex; flex-direction: column; gap: 14px; }
-    .hist-card {
-      background: var(--surface); border-radius: 20px; padding: 18px;
-    }
+    .hist-card { background: var(--surface); border-radius: 20px; padding: 18px; }
     .hist-month { font-size: 13px; color: var(--muted); font-weight: 600; margin-bottom: 12px; }
-    .hist-winner-box {
-      background: linear-gradient(135deg, rgba(124,77,255,.15), rgba(233,30,140,.15));
-      border: 1px solid rgba(124,77,255,.3);
-      border-radius: 14px; padding: 14px; text-align: center; margin-bottom: 12px;
-    }
+    .hist-winner-box { background: linear-gradient(135deg, rgba(124,77,255,.15), rgba(233,30,140,.15)); border: 1px solid rgba(124,77,255,.3); border-radius: 14px; padding: 14px; text-align: center; margin-bottom: 12px; }
     .hist-trophy { font-size: 28px; margin-bottom: 4px; }
     .hist-winner-name { font-size: 20px; font-weight: 900; }
     .hist-prize { font-size: 13px; color: var(--muted); margin-top: 2px; }
     .hist-rows { display: flex; flex-direction: column; gap: 6px; }
-    .hist-row {
-      display: flex; align-items: center; justify-content: space-between;
-      font-size: 13px;
-    }
+    .hist-row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; }
     .hist-row-left { display: flex; align-items: center; gap: 8px; }
-    .hist-row-dot { width: 8px; height: 8px; border-radius: 50%; }
-    .hist-row-name { font-weight: 600; }
+    .hist-row-dot  { width: 8px; height: 8px; border-radius: 50%; }
+    .hist-row-name   { font-weight: 600; }
     .hist-row-amount { color: var(--muted); }
 
+    /* ── REPORTS VIEW ── */
+    .reports-inner { padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+    .report-month-nav { display: flex; align-items: center; justify-content: space-between; background: var(--surface); border-radius: 16px; padding: 10px 14px; }
+    .report-month-btn { background: var(--surface2); border: none; color: var(--text); font-size: 18px; width: 34px; height: 34px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .report-month-btn:disabled { opacity: .3; cursor: default; }
+    .report-month-label { font-size: 14px; font-weight: 700; }
+    .chart-card { background: var(--surface); border-radius: 20px; padding: 16px; }
+    .chart-title { font-size: 12px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); margin-bottom: 12px; }
+    .chart-wrap { position: relative; height: 180px; }
+    canvas.chart { display: block; width: 100%; height: 100%; }
+    .chart-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 12px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+    .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .stat-card { background: var(--surface); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 4px; border-left: 3px solid var(--c); }
+    .stat-name   { font-size: 13px; font-weight: 700; color: var(--c); }
+    .stat-swears { font-size: 22px; font-weight: 900; }
+    .stat-label  { font-size: 11px; color: var(--muted); }
+    .stat-worst  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
     /* ── BOTTOM NAV ── */
-    .bottom-nav {
-      position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
-      width: 100%; max-width: 480px;
-      background: var(--surface); border-top: 1px solid var(--border);
-      display: flex;
-      padding-bottom: env(safe-area-inset-bottom);
-    }
-    .nav-tab {
-      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
-      padding: 10px 8px; border: none; background: none;
-      color: var(--muted); font-size: 11px; font-weight: 600; cursor: pointer;
-      transition: color .2s;
-    }
+    .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: var(--surface); border-top: 1px solid var(--border); display: flex; padding-bottom: env(safe-area-inset-bottom); }
+    .nav-tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 8px; border: none; background: none; color: var(--muted); font-size: 10px; font-weight: 600; cursor: pointer; transition: color .2s; }
     .nav-tab.active { color: var(--purple); }
-    .nav-icon { font-size: 22px; }
+    .nav-icon { font-size: 20px; }
 
     /* ── VIEW TOGGLE ── */
     .view { display: none; }
     .view.active { display: block; }
 
     /* ── MODAL ── */
-    .overlay {
-      display: none; position: fixed; inset: 0;
-      background: rgba(0,0,0,.75); z-index: 200;
-      align-items: flex-end; justify-content: center;
-    }
+    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 200; align-items: flex-end; justify-content: center; }
     .overlay.open { display: flex; }
     .modal {
       background: var(--surface); border-radius: 28px 28px 0 0;
-      padding: 24px 18px calc(24px + env(safe-area-inset-bottom));
+      padding: 0 18px calc(20px + env(safe-area-inset-bottom));
       width: 100%; max-width: 480px;
+      max-height: 88vh; overflow-y: auto;
     }
-    .modal-handle {
-      width: 40px; height: 4px; background: var(--surface2);
-      border-radius: 4px; margin: 0 auto 18px;
-    }
+    .modal-sticky { position: sticky; top: 0; background: var(--surface); padding-top: 20px; padding-bottom: 4px; z-index: 10; }
+    .modal-handle { width: 40px; height: 4px; background: var(--surface2); border-radius: 4px; margin: 0 auto 14px; }
     .modal-title { font-size: 22px; font-weight: 900; text-align: center; margin-bottom: 6px; }
-    .modal-sub { font-size: 14px; color: var(--muted); text-align: center; margin-bottom: 18px; }
-    .modal-winner-box {
-      background: linear-gradient(135deg, rgba(124,77,255,.2), rgba(233,30,140,.2));
-      border-radius: 18px; padding: 18px; text-align: center; margin-bottom: 16px;
-    }
-    .modal-trophy { font-size: 44px; margin-bottom: 6px; }
-    .modal-winner-name { font-size: 28px; font-weight: 900; }
-    .modal-prize { font-size: 16px; color: rgba(255,255,255,.7); margin-top: 4px; }
-    .modal-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
-    .modal-row {
-      background: var(--surface2); border-radius: 13px;
-      padding: 13px 16px;
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    .modal-row-left { display: flex; align-items: center; gap: 10px; font-size: 15px; }
+    .modal-sub   { font-size: 14px; color: var(--muted); text-align: center; margin-bottom: 16px; }
+    .modal-winner-box { background: linear-gradient(135deg, rgba(124,77,255,.2), rgba(233,30,140,.2)); border-radius: 18px; padding: 16px; text-align: center; margin-bottom: 14px; }
+    .modal-trophy      { font-size: 40px; margin-bottom: 6px; }
+    .modal-winner-name { font-size: 26px; font-weight: 900; }
+    .modal-prize       { font-size: 15px; color: rgba(255,255,255,.7); margin-top: 4px; }
+    .modal-rows { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+    .modal-row { background: var(--surface2); border-radius: 13px; padding: 13px 16px; display: flex; align-items: center; justify-content: space-between; }
+    .modal-row-left  { display: flex; align-items: center; gap: 10px; font-size: 15px; }
     .modal-row-right { font-size: 14px; color: var(--muted); }
+    /* Payment section in modal */
+    .modal-payment {
+      background: rgba(0,200,100,.07); border: 1px solid rgba(0,200,100,.2);
+      border-radius: 16px; padding: 14px 16px; margin-bottom: 14px;
+    }
+    .modal-pay-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(0,220,110,.7); margin-bottom: 8px; }
+    .modal-pay-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .modal-pay-info { font-size: 15px; font-weight: 700; word-break: break-all; flex: 1; }
+    .modal-pay-copy { border: none; background: rgba(0,220,110,.15); color: rgba(0,220,110,1); border-radius: 10px; padding: 7px 12px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
+    .modal-pay-note { font-size: 12px; color: var(--muted); margin-top: 8px; }
     .modal-confirm {
       width: 100%; padding: 16px; border: none; border-radius: 16px;
       background: linear-gradient(135deg, var(--purple), var(--pink));
-      color: #fff; font-size: 16px; font-weight: 800; cursor: pointer;
-      margin-bottom: 10px;
+      color: #fff; font-size: 16px; font-weight: 800; cursor: pointer; margin-bottom: 10px;
     }
-    .modal-cancel {
-      width: 100%; padding: 14px; border: none; border-radius: 16px;
-      background: var(--surface2); color: var(--muted); font-size: 15px;
-      font-weight: 600; cursor: pointer;
+    .modal-cancel { width: 100%; padding: 14px; border: none; border-radius: 16px; background: var(--surface2); color: var(--muted); font-size: 15px; font-weight: 600; cursor: pointer; }
+
+    /* ── SETTINGS VIEW ── */
+    .settings-inner { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+    .settings-section-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); padding: 4px 0 2px; }
+    .settings-card { background: var(--surface); border-radius: 18px; overflow: hidden; }
+    .settings-row-top { display: flex; align-items: center; gap: 10px; padding: 12px 14px 10px; }
+    .settings-slot-emoji { font-size: 24px; flex-shrink: 0; width: 30px; text-align: center; }
+    .settings-name-input {
+      flex: 1; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 9px 11px;
+      color: var(--text); font-size: 15px; font-weight: 600;
+      outline: none; -webkit-appearance: none;
     }
+    .settings-name-input:focus { border-color: var(--purple); }
+    .settings-color-wrap { position: relative; width: 34px; height: 34px; flex-shrink: 0; }
+    .settings-color-swatch { width: 34px; height: 34px; border-radius: 50%; border: 2.5px solid rgba(255,255,255,0.25); pointer-events: none; }
+    .settings-color-input  { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; border: none; padding: 0; }
+    .settings-delete-btn   { width: 30px; height: 30px; border-radius: 50%; border: none; background: rgba(255,68,68,.15); color: #ff6b6b; font-size: 18px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: background .15s; }
+    .settings-delete-btn:active { background: rgba(255,68,68,.3); }
+    /* Payment info row */
+    .settings-row-pay { display: flex; align-items: center; gap: 10px; padding: 0 14px 12px 14px; border-top: 1px solid var(--border); margin-top: 2px; padding-top: 10px; }
+    .settings-pay-icon { font-size: 16px; flex-shrink: 0; width: 30px; text-align: center; }
+    .settings-pay-input {
+      flex: 1; background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 10px; padding: 9px 11px;
+      color: var(--text); font-size: 13px; font-weight: 500;
+      outline: none; -webkit-appearance: none;
+    }
+    .settings-pay-input::placeholder { color: var(--muted); font-size: 12px; }
+    .settings-pay-input:focus { border-color: rgba(0,220,110,.5); }
+    /* Add / Save */
+    .settings-add-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 14px; border: 2px dashed rgba(124,77,255,.4); border-radius: 18px;
+      background: none; color: var(--purple); font-size: 15px; font-weight: 700;
+      cursor: pointer; transition: border-color .15s, background .15s; -webkit-appearance: none;
+    }
+    .settings-add-btn:active { background: rgba(124,77,255,.08); border-color: var(--purple); }
+    .btn-settings-save {
+      display: block; padding: 16px; border: none; border-radius: 16px;
+      background: linear-gradient(135deg, var(--purple), var(--pink));
+      color: #fff; font-size: 16px; font-weight: 800; cursor: pointer; width: 100%; -webkit-appearance: none;
+    }
+    .btn-settings-save:active { opacity: .85; }
 
     /* ── TOAST ── */
     .toast {
       position: fixed; top: 16px; left: 50%; transform: translateX(-50%) translateY(-80px);
       background: rgba(255,255,255,.12); backdrop-filter: blur(20px);
-      color: #fff; padding: 10px 20px; border-radius: 100px;
-      font-size: 14px; font-weight: 600; z-index: 999;
-      border: 1px solid rgba(255,255,255,.15);
-      transition: transform .3s cubic-bezier(.34,1.56,.64,1);
-      white-space: nowrap;
+      color: #fff; padding: 10px 20px; border-radius: 100px; font-size: 14px; font-weight: 600;
+      z-index: 999; border: 1px solid rgba(255,255,255,.15);
+      transition: transform .3s cubic-bezier(.34,1.56,.64,1); white-space: nowrap;
     }
     .toast.show { transform: translateX(-50%) translateY(0); }
 
-    /* ── PULSE ANIMATION ── */
-    @keyframes pulse {
-      0%   { transform: scale(1); }
-      50%  { transform: scale(1.06); }
-      100% { transform: scale(1); }
-    }
+    /* ── PULSE ── */
+    @keyframes pulse { 0%{transform:scale(1)} 50%{transform:scale(1.06)} 100%{transform:scale(1)} }
     .pulse { animation: pulse .2s ease; }
   </style>
 </head>
 <body>
 
-  <!-- Toast -->
   <div class="toast" id="toast"></div>
 
-  <!-- ════════════════════ TRACKER VIEW ════════════════════ -->
+  <!-- ═══════════════ TRACKER ═══════════════ -->
   <div class="view active" id="view-tracker">
-
     <div class="header">
       <div class="header-row">
         <div class="app-title">🤐 Swear Jar</div>
@@ -287,35 +273,72 @@
         </div>
       </div>
     </div>
-
     <div class="grid" id="kids-grid"></div>
-
     <div class="actions">
       <button class="btn btn-ghost" onclick="undoLast()">↩ Undo</button>
       <button class="btn btn-grad"  onclick="openEndMonth()">🏆 End Month</button>
     </div>
-
     <div class="section">
       <div class="section-header">Recent Activity</div>
       <div class="activity-list" id="activity-list"></div>
     </div>
-
   </div>
 
-  <!-- ════════════════════ HISTORY VIEW ════════════════════ -->
+  <!-- ═══════════════ HISTORY ═══════════════ -->
   <div class="view" id="view-history">
-
     <div class="header">
-      <div class="header-row">
-        <div class="app-title">📊 History</div>
+      <div class="header-row-bare">
+        <div class="app-title">🏅 History</div>
       </div>
     </div>
-
     <div class="history-list" id="history-list"></div>
-
   </div>
 
-  <!-- ════════════════════ BOTTOM NAV ════════════════════ -->
+  <!-- ═══════════════ REPORTS ═══════════════ -->
+  <div class="view" id="view-reports">
+    <div class="header">
+      <div class="header-row-bare">
+        <div class="app-title">📈 Reports</div>
+      </div>
+    </div>
+    <div class="reports-inner">
+      <!-- Month navigation -->
+      <div class="report-month-nav">
+        <button class="report-month-btn" id="rep-prev" onclick="reportMonthStep(-1)">‹</button>
+        <div class="report-month-label" id="rep-month-label">—</div>
+        <button class="report-month-btn" id="rep-next" onclick="reportMonthStep(1)">›</button>
+      </div>
+      <!-- Bar chart -->
+      <div class="chart-card">
+        <div class="chart-title">Swears by Day</div>
+        <div class="chart-wrap">
+          <canvas class="chart" id="report-canvas"></canvas>
+        </div>
+        <div class="chart-legend" id="chart-legend"></div>
+      </div>
+      <!-- Per-person stats -->
+      <div class="section-header" style="padding:0">Totals</div>
+      <div class="stats-grid" id="stats-grid"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ SETTINGS ═══════════════ -->
+  <div class="view" id="view-settings">
+    <div class="header">
+      <div class="header-row-bare">
+        <div class="app-title">⚙️ Settings</div>
+      </div>
+    </div>
+    <div class="settings-inner">
+      <div class="settings-section-label">People in the jar</div>
+      <div id="settings-list"></div>
+      <button class="settings-add-btn" onclick="addSettingsRow()">＋ Add Person</button>
+      <div class="settings-section-label" style="margin-top:4px">Save</div>
+      <button class="btn-settings-save" onclick="saveSettingsFromForm()">Save Changes</button>
+    </div>
+  </div>
+
+  <!-- ═══════════════ BOTTOM NAV ═══════════════ -->
   <div class="bottom-nav">
     <button class="nav-tab active" id="tab-tracker" onclick="switchView('tracker')">
       <span class="nav-icon">🎯</span><span>Tracker</span>
@@ -323,103 +346,140 @@
     <button class="nav-tab" id="tab-history" onclick="switchView('history')">
       <span class="nav-icon">🏅</span><span>History</span>
     </button>
+    <button class="nav-tab" id="tab-reports" onclick="switchView('reports')">
+      <span class="nav-icon">📈</span><span>Reports</span>
+    </button>
+    <button class="nav-tab" id="tab-settings" onclick="switchView('settings')">
+      <span class="nav-icon">⚙️</span><span>Settings</span>
+    </button>
   </div>
 
-  <!-- ════════════════════ END-MONTH MODAL ════════════════════ -->
+  <!-- ═══════════════ END-MONTH MODAL ═══════════════ -->
   <div class="overlay" id="overlay" onclick="handleOverlayClick(event)">
     <div class="modal" id="modal">
-      <div class="modal-handle"></div>
-      <div class="modal-title">End the Month? 🏆</div>
-      <div class="modal-sub" id="modal-sub"></div>
+      <div class="modal-sticky">
+        <div class="modal-handle"></div>
+        <div class="modal-title">End the Month? 🏆</div>
+        <div class="modal-sub" id="modal-sub"></div>
+      </div>
       <div class="modal-winner-box" id="modal-winner-box"></div>
       <div class="modal-rows" id="modal-rows"></div>
+      <div id="modal-payment"></div>
       <button class="modal-confirm" onclick="confirmEndMonth()">Confirm & Reset Month</button>
       <button class="modal-cancel"  onclick="closeModal()">Cancel</button>
     </div>
   </div>
 
   <script>
-  // ══════════════════════════════════════════
+  // ══════════════════════════════════════════════════════
   //  CONFIG
-  // ══════════════════════════════════════════
-  const KIDS = ['Delaney', 'Hadley', 'Emerson', 'Grant'];
-  const COLORS = {
-    Delaney: 'var(--delaney)',
-    Hadley:  'var(--hadley)',
-    Emerson: 'var(--emerson)',
-    Grant:   'var(--grant)',
-  };
-  const COLOR_HEX = {
-    Delaney: '#e91e8c',
-    Hadley:  '#00c2e0',
-    Emerson: '#56c278',
-    Grant:   '#ffa726',
-  };
-  const EMOJI = {
-    Delaney: '👧',
-    Hadley:  '🧒',
-    Emerson: '👦',
-    Grant:   '🧑',
-  };
+  // ══════════════════════════════════════════════════════
+  const SLOT_EMOJI = ['👧','🧒','👦','🧑','👩','👨','🧔','👱','🧕','👲'];
+  const DEFAULT_SETTINGS = [
+    { name:'Delaney', color:'#e91e8c', paymentInfo:'' },
+    { name:'Hadley',  color:'#00c2e0', paymentInfo:'' },
+    { name:'Emerson', color:'#56c278', paymentInfo:'' },
+    { name:'Grant',   color:'#ffa726', paymentInfo:'' },
+  ];
   const MONTHS = ['January','February','March','April','May','June',
                   'July','August','September','October','November','December'];
+  const PALETTE = ['#e91e8c','#00c2e0','#56c278','#ffa726','#ab47bc','#ef5350','#26c6da','#66bb6a','#ffa000','#8d6e63'];
 
-  // ══════════════════════════════════════════
-  //  STATE
-  // ══════════════════════════════════════════
+  // ── Settings storage ──
+  function loadSettings() {
+    try {
+      const s = localStorage.getItem('swearjar2-settings');
+      if (s) {
+        const arr = JSON.parse(s);
+        // Backfill paymentInfo for older saves
+        return arr.map(x => ({ paymentInfo:'', ...x }));
+      }
+    } catch(e) {}
+    return DEFAULT_SETTINGS.map(k => ({...k}));
+  }
+  function saveSettings(s) { localStorage.setItem('swearjar2-settings', JSON.stringify(s)); }
+
+  let settings  = loadSettings();
+  let KIDS      = settings.map(s => s.name);
+  let COLORS    = Object.fromEntries(settings.map(s => [s.name, s.color]));
+  let COLOR_HEX = Object.fromEntries(settings.map(s => [s.name, s.color]));
+  let EMOJI     = Object.fromEntries(settings.map((s,i) => [s.name, SLOT_EMOJI[i] ?? '🧒']));
+  let PAY_INFO  = Object.fromEntries(settings.map(s => [s.name, s.paymentInfo ?? '']));
+
+  // ── Game state storage ──
   function defaultState() {
     const kids = {};
-    KIDS.forEach(k => { kids[k] = { amount: 0, swears: 0 }; });
-    return { kids, history: [], monthlyResults: [] };
+    KIDS.forEach(k => { kids[k] = { amount:0, swears:0 }; });
+    return { kids, history:[], monthlyResults:[] };
   }
-
   function load() {
-    try { const s = localStorage.getItem('swearjar2'); if (s) return JSON.parse(s); } catch(e) {}
+    try {
+      const s = localStorage.getItem('swearjar2');
+      if (s) {
+        const data = JSON.parse(s);
+        (data.monthlyResults || []).forEach(r => {
+          if (!r.winners && r.winner) { r.winners = [r.winner]; delete r.winner; }
+        });
+        return data;
+      }
+    } catch(e) {}
     return defaultState();
   }
   function save() { localStorage.setItem('swearjar2', JSON.stringify(state)); }
-
   let state = load();
 
-  // ══════════════════════════════════════════
+  // ══════════════════════════════════════════════════════
   //  HELPERS
-  // ══════════════════════════════════════════
+  // ══════════════════════════════════════════════════════
   function currentMonthKey() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
   }
   function formatMonthKey(key) {
-    const [y, m] = key.split('-');
+    if (!key) return '—';
+    const [y,m] = key.split('-');
     return `${MONTHS[parseInt(m)-1]} ${y}`;
   }
   function totalPot() {
-    return Object.values(state.kids).reduce((s, k) => s + k.amount, 0);
+    return Object.values(state.kids).reduce((s,k) => s + k.amount, 0);
   }
   function getWinners() {
-    // Kid(s) with the LEAST amount owed wins
-    const min = Math.min(...KIDS.map(k => state.kids[k].amount));
-    return KIDS.filter(k => state.kids[k].amount === min);
+    const min = Math.min(...KIDS.map(k => state.kids[k]?.amount ?? 0));
+    return KIDS.filter(k => (state.kids[k]?.amount ?? 0) === min);
+  }
+  function getWorst() {
+    if (totalPot() === 0) return [];
+    const max = Math.max(...KIDS.map(k => state.kids[k]?.amount ?? 0));
+    if (max === 0) return [];
+    return KIDS.filter(k => (state.kids[k]?.amount ?? 0) === max);
   }
   function relativeTime(iso) {
     const diff = (Date.now() - new Date(iso)) / 1000;
-    if (diff < 60)   return 'just now';
-    if (diff < 3600) return `${Math.floor(diff/60)}m ago`;
+    if (diff < 60)    return 'just now';
+    if (diff < 3600)  return `${Math.floor(diff/60)}m ago`;
     if (diff < 86400) return `${Math.floor(diff/3600)}h ago`;
     const d = new Date(iso);
     return `${MONTHS[d.getMonth()].slice(0,3)} ${d.getDate()}`;
   }
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function copyToClipboard(text) {
+    navigator.clipboard?.writeText(text).catch(() => {});
+    toast(`Copied: ${text} 📋`);
+  }
 
-  // ══════════════════════════════════════════
+  // ══════════════════════════════════════════════════════
   //  ACTIONS
-  // ══════════════════════════════════════════
+  // ══════════════════════════════════════════════════════
   function addSwear(kid) {
+    if (!state.kids[kid]) state.kids[kid] = { amount:0, swears:0 };
     state.kids[kid].amount++;
     state.kids[kid].swears++;
     state.history.unshift({ kid, ts: new Date().toISOString() });
-    if (state.history.length > 200) state.history.length = 200;
+    if (state.history.length > 500) state.history.length = 500;
     save(); render();
     toast(`${kid} owes $1 💸`);
-    // animate card
     const card = document.querySelector(`[data-kid="${kid}"]`);
     if (card) { card.classList.remove('pulse'); void card.offsetWidth; card.classList.add('pulse'); }
   }
@@ -427,8 +487,10 @@
   function undoLast() {
     if (!state.history.length) { toast('Nothing to undo!'); return; }
     const { kid } = state.history.shift();
-    state.kids[kid].amount = Math.max(0, state.kids[kid].amount - 1);
-    state.kids[kid].swears = Math.max(0, state.kids[kid].swears - 1);
+    if (state.kids[kid]) {
+      state.kids[kid].amount = Math.max(0, state.kids[kid].amount - 1);
+      state.kids[kid].swears = Math.max(0, state.kids[kid].swears - 1);
+    }
     save(); render();
     toast(`Undid ${kid}'s swear ↩`);
   }
@@ -436,36 +498,57 @@
   function openEndMonth() {
     const pot     = totalPot();
     const winners = getWinners();
-    const sorted  = [...KIDS].sort((a,b) => state.kids[a].amount - state.kids[b].amount);
+    const sorted  = [...KIDS].sort((a,b) => (state.kids[a]?.amount??0) - (state.kids[b]?.amount??0));
 
-    // subtitle
     document.getElementById('modal-sub').textContent =
       pot === 0
         ? 'No swears this month — everyone wins! 🎉'
         : winners.length > 1
-          ? `${winners.join(' & ')} are tied with the fewest swears!`
+          ? `${winners.join(' & ')} tied with the fewest swears!`
           : `${winners[0]} had the fewest swears and wins the pot!`;
 
-    // winner box
     const prize = winners.length > 1
       ? `Each wins $${(pot / winners.length).toFixed(2)}`
       : `Wins $${pot}!`;
+
     document.getElementById('modal-winner-box').innerHTML = `
       <div class="modal-trophy">${winners.length > 1 ? '🤝' : '🏆'}</div>
       <div class="modal-winner-name" style="color:${COLOR_HEX[winners[0]]}">${winners.join(' & ')}</div>
       <div class="modal-prize">${prize}</div>
     `;
 
-    // kid rows
-    document.getElementById('modal-rows').innerHTML = sorted.map((kid, i) => `
+    document.getElementById('modal-rows').innerHTML = sorted.map((kid,i) => `
       <div class="modal-row">
         <div class="modal-row-left">
           <span>${i===0?'🥇':i===1?'🥈':i===2?'🥉':'4️⃣'}</span>
           <span style="font-weight:700;color:${COLOR_HEX[kid]}">${kid}</span>
         </div>
-        <div class="modal-row-right">${state.kids[kid].swears} swear${state.kids[kid].swears!==1?'s':''} = $${state.kids[kid].amount}</div>
+        <div class="modal-row-right">${state.kids[kid]?.swears??0} swear${(state.kids[kid]?.swears??0)!==1?'s':''} = $${state.kids[kid]?.amount??0}</div>
       </div>
     `).join('');
+
+    // Payment section — show winner's payment info if available
+    const payEl = document.getElementById('modal-payment');
+    const winnerPayInfos = winners
+      .map(w => ({ name: w, info: PAY_INFO[w] ?? '' }))
+      .filter(x => x.info.trim());
+
+    if (pot > 0 && winnerPayInfos.length > 0) {
+      payEl.innerHTML = `
+        <div class="modal-payment">
+          <div class="modal-pay-label">💸 Pay the winner</div>
+          ${winnerPayInfos.map(({ name, info }) => `
+            <div class="modal-pay-row">
+              <div class="modal-pay-info" style="color:${COLOR_HEX[name]}">${escHtml(info)}</div>
+              <button class="modal-pay-copy" onclick="copyToClipboard('${escHtml(info)}')">📋 Copy</button>
+            </div>
+          `).join('')}
+          <div class="modal-pay-note">Each person owes ${winners.length > 1 ? 'a share of' : ''} $${pot} to ${winners.join(' & ')}</div>
+        </div>
+      `;
+    } else {
+      payEl.innerHTML = '';
+    }
 
     document.getElementById('overlay').classList.add('open');
   }
@@ -474,78 +557,71 @@
     const pot     = totalPot();
     const winners = getWinners();
     const month   = currentMonthKey();
-
     state.monthlyResults.unshift({
       month, winners, pot,
       kids: JSON.parse(JSON.stringify(state.kids)),
     });
-
-    // reset
-    KIDS.forEach(k => { state.kids[k] = { amount: 0, swears: 0 }; });
+    KIDS.forEach(k => { state.kids[k] = { amount:0, swears:0 }; });
     state.history = [];
     save(); closeModal(); render();
     switchView('tracker');
     toast(`${winners.join(' & ')} win${winners.length>1?'':'s'} $${pot}! 🏆`);
   }
 
-  function closeModal() {
-    document.getElementById('overlay').classList.remove('open');
-  }
-  function handleOverlayClick(e) {
-    if (e.target === document.getElementById('overlay')) closeModal();
-  }
+  function closeModal() { document.getElementById('overlay').classList.remove('open'); }
+  function handleOverlayClick(e) { if (e.target === document.getElementById('overlay')) closeModal(); }
 
-  // ══════════════════════════════════════════
-  //  RENDER
-  // ══════════════════════════════════════════
+  // ══════════════════════════════════════════════════════
+  //  RENDER — TRACKER
+  // ══════════════════════════════════════════════════════
   function render() {
     const pot     = totalPot();
     const winners = getWinners();
+    const worst   = getWorst();
 
-    // header
-    document.getElementById('month-chip').textContent = formatMonthKey(currentMonthKey());
+    document.getElementById('month-chip').textContent  = formatMonthKey(currentMonthKey());
     document.getElementById('pot-amount').textContent  = `$${pot}`;
-    document.getElementById('pot-leader').textContent  = winners.join(' & ');
+    document.getElementById('pot-leader').textContent  = pot > 0 ? winners.join(' & ') : '—';
 
-    // kid cards
     document.getElementById('kids-grid').innerHTML = KIDS.map(kid => {
-      const { amount, swears } = state.kids[kid];
-      const isLeading = winners.includes(kid);
+      const { amount=0, swears=0 } = state.kids[kid] ?? {};
+      const isLeading = pot > 0 && winners.includes(kid);
+      const isWorst   = worst.includes(kid);
+      const cls = ['kid-card', isLeading?'leading':'', isWorst?'worst':''].filter(Boolean).join(' ');
       return `
-        <div class="kid-card${isLeading ? ' leading' : ''}" data-kid="${kid}" style="--c:${COLORS[kid]}">
+        <div class="${cls}" data-kid="${kid}" style="--c:${COLORS[kid]??'#888'}">
+          <div class="kid-badmouth">🤬</div>
           <div class="kid-crown">👑</div>
-          <div class="kid-avatar">
-            <span class="kid-avatar-emoji">${EMOJI[kid]}</span>
-          </div>
-          <div class="kid-name">${kid}</div>
+          <div class="kid-avatar"><span class="kid-avatar-emoji">${EMOJI[kid]??'🧒'}</span></div>
+          <div class="kid-name">${escHtml(kid)}</div>
           <div class="kid-amount">$${amount}</div>
           <div class="kid-count">${swears} swear${swears!==1?'s':''}</div>
-          <button class="swear-btn" onclick="addSwear('${kid}')">🤬 +$1</button>
-        </div>
-      `;
+          <button class="swear-btn" onclick="addSwear('${escHtml(kid)}')">🤬 +$1</button>
+        </div>`;
     }).join('');
 
-    // activity
     const recent = state.history.slice(0, 12);
     const actEl  = document.getElementById('activity-list');
     if (!recent.length) {
       actEl.innerHTML = `<div class="empty"><div class="empty-icon">😇</div><div>No swears yet this month!</div></div>`;
     } else {
       actEl.innerHTML = recent.map(({ kid, ts }) => `
-        <div class="activity-row" style="--c:${COLORS[kid]}">
+        <div class="activity-row" style="--c:${COLORS[kid]??'#888'}">
           <div class="activity-left">
             <div class="activity-dot"></div>
-            <div class="activity-name">${kid}</div>
+            <div class="activity-name">${escHtml(kid)}</div>
           </div>
           <div class="activity-right">
             <div class="activity-time">${relativeTime(ts)}</div>
             <div class="activity-badge">+$1</div>
           </div>
-        </div>
-      `).join('');
+        </div>`).join('');
     }
   }
 
+  // ══════════════════════════════════════════════════════
+  //  RENDER — HISTORY
+  // ══════════════════════════════════════════════════════
   function renderHistory() {
     const el = document.getElementById('history-list');
     if (!state.monthlyResults.length) {
@@ -553,12 +629,11 @@
       return;
     }
     el.innerHTML = state.monthlyResults.map(r => {
-      const sorted = [...KIDS].sort((a,b) => (r.kids[a]?.amount||0) - (r.kids[b]?.amount||0));
-      const prizeStr = r.winners?.length > 1
-        ? `Each won $${(r.pot / r.winners.length).toFixed(2)}`
-        : `Won $${r.pot}`;
-      const winnerName = (r.winners || [r.winner]).join(' & ');
-      const winnerColor = COLOR_HEX[(r.winners||[r.winner])[0]];
+      const allKids = Object.keys(r.kids);
+      const sorted  = [...allKids].sort((a,b) => (r.kids[a]?.amount??0) - (r.kids[b]?.amount??0));
+      const prizeStr   = r.winners?.length > 1 ? `Each won $${(r.pot / r.winners.length).toFixed(2)}` : `Won $${r.pot}`;
+      const winnerName = (r.winners ?? [r.winner]).join(' & ');
+      const winnerColor= COLOR_HEX[(r.winners??[r.winner])[0]] ?? '#fff';
       return `
         <div class="hist-card">
           <div class="hist-month">${formatMonthKey(r.month)}</div>
@@ -568,54 +643,381 @@
             <div class="hist-prize">${prizeStr}</div>
           </div>
           <div class="hist-rows">
-            ${sorted.map((kid,i) => `
+            ${sorted.map(kid => `
               <div class="hist-row">
                 <div class="hist-row-left">
-                  <div class="hist-row-dot" style="background:${COLOR_HEX[kid]}"></div>
-                  <span class="hist-row-name" style="color:${COLOR_HEX[kid]}">${kid}</span>
+                  <div class="hist-row-dot" style="background:${COLOR_HEX[kid]??'#888'}"></div>
+                  <span class="hist-row-name" style="color:${COLOR_HEX[kid]??'#888'}">${escHtml(kid)}</span>
                 </div>
-                <div class="hist-row-amount">${r.kids[kid]?.swears||0} swears = $${r.kids[kid]?.amount||0}</div>
-              </div>
-            `).join('')}
+                <div class="hist-row-amount">${r.kids[kid]?.swears??0} swears = $${r.kids[kid]?.amount??0}</div>
+              </div>`).join('')}
           </div>
-        </div>
-      `;
+        </div>`;
     }).join('');
   }
 
-  // ══════════════════════════════════════════
+  // ══════════════════════════════════════════════════════
+  //  RENDER — REPORTS
+  // ══════════════════════════════════════════════════════
+  let reportMonthIndex = 0; // 0 = current month, 1 = most recent past, etc.
+
+  function reportMonthStep(dir) {
+    const maxIdx = state.monthlyResults.length; // 0..maxIdx
+    reportMonthIndex = Math.max(0, Math.min(maxIdx, reportMonthIndex + dir));
+    renderReports();
+  }
+
+  function getReportData() {
+    // Index 0 = current month (from live state.history)
+    // Index 1+ = completed months from monthlyResults[index-1]
+    if (reportMonthIndex === 0) {
+      return { monthKey: currentMonthKey(), history: state.history };
+    } else {
+      const r = state.monthlyResults[reportMonthIndex - 1];
+      if (!r) return { monthKey: currentMonthKey(), history: [] };
+      // Reconstruct history-like list from kids totals (we don't store daily breakdown for past months)
+      // We just store the totals, so past months can only show totals, not daily breakdown
+      return { monthKey: r.month, history: null, pastResult: r };
+    }
+  }
+
+  function renderReports() {
+    const maxIdx = state.monthlyResults.length;
+    document.getElementById('rep-prev').disabled = (reportMonthIndex >= maxIdx);
+    document.getElementById('rep-next').disabled = (reportMonthIndex <= 0);
+
+    const { monthKey, history, pastResult } = getReportData();
+    document.getElementById('rep-month-label').textContent = formatMonthKey(monthKey);
+
+    if (pastResult) {
+      // Past month — show totals only, no daily chart
+      renderPastReports(pastResult);
+      return;
+    }
+
+    // Current month — daily breakdown chart
+    const byDate = {};
+    (history || []).forEach(({ kid, ts }) => {
+      const date = ts.split('T')[0];
+      if (!byDate[date]) byDate[date] = {};
+      byDate[date][kid] = (byDate[date][kid] || 0) + 1;
+    });
+
+    // Build dates array for current month up to today
+    const now  = new Date();
+    const mPfx = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+    const dates = [];
+    for (let d = 1; d <= now.getDate(); d++) {
+      dates.push(`${mPfx}-${String(d).padStart(2,'0')}`);
+    }
+
+    const maxVal = Math.max(1, ...dates.map(dt =>
+      KIDS.reduce((s, k) => s + (byDate[dt]?.[k] ?? 0), 0)
+    ));
+
+    drawChart(dates, byDate, maxVal);
+
+    // Legend
+    document.getElementById('chart-legend').innerHTML = KIDS.map(k => `
+      <div class="legend-item">
+        <div class="legend-dot" style="background:${COLOR_HEX[k]??'#888'}"></div>
+        <span>${escHtml(k)}</span>
+      </div>`).join('');
+
+    // Stats grid — current month from live state
+    document.getElementById('stats-grid').innerHTML = KIDS.map(kid => {
+      const { amount=0, swears=0 } = state.kids[kid] ?? {};
+      // Find worst day
+      let worstDay = null, worstCount = 0;
+      Object.entries(byDate).forEach(([dt, d]) => {
+        const c = d[kid] ?? 0;
+        if (c > worstCount) { worstCount = c; worstDay = dt; }
+      });
+      const worstLabel = worstDay
+        ? `Worst: ${MONTHS[parseInt(worstDay.split('-')[1])-1].slice(0,3)} ${parseInt(worstDay.split('-')[2])} (${worstCount})`
+        : 'No swears yet!';
+      return `
+        <div class="stat-card" style="--c:${COLOR_HEX[kid]??'#888'}">
+          <div class="stat-name">${escHtml(kid)}</div>
+          <div class="stat-swears">${swears}</div>
+          <div class="stat-label">swear${swears!==1?'s':''} = $${amount}</div>
+          <div class="stat-worst">${worstLabel}</div>
+        </div>`;
+    }).join('');
+  }
+
+  function renderPastReports(r) {
+    // No daily data for past months, show totals
+    const allKids = Object.keys(r.kids);
+
+    // Clear chart and draw a summary bar per person instead
+    const byDate = {};
+    const allNames = allKids.join('_total');
+    // Use a simple total-per-person "single bar" visualization
+    const totals = Object.fromEntries(allKids.map(k => [k, r.kids[k]?.swears ?? 0]));
+    const maxVal  = Math.max(1, ...Object.values(totals));
+
+    // Draw horizontal-style totals in the canvas
+    drawTotalsChart(allKids, totals, maxVal);
+
+    document.getElementById('chart-legend').innerHTML = allKids.map(k => `
+      <div class="legend-item">
+        <div class="legend-dot" style="background:${COLOR_HEX[k]??'#888'}"></div>
+        <span>${escHtml(k)}: ${r.kids[k]?.swears??0} swears</span>
+      </div>`).join('');
+
+    document.getElementById('stats-grid').innerHTML = allKids.map(kid => {
+      const { amount=0, swears=0 } = r.kids[kid] ?? {};
+      const isWinner = (r.winners ?? [r.winner]).includes(kid);
+      return `
+        <div class="stat-card" style="--c:${COLOR_HEX[kid]??'#888'}">
+          <div class="stat-name">${escHtml(kid)} ${isWinner?'🏆':''}</div>
+          <div class="stat-swears">${swears}</div>
+          <div class="stat-label">swear${swears!==1?'s':''} = $${amount}</div>
+        </div>`;
+    }).join('');
+  }
+
+  // ── Canvas helpers ──
+  function rrect(ctx, x, y, w, h, r) {
+    r = Math.min(r, h/2, w/2);
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.lineTo(x+w-r, y);
+    ctx.quadraticCurveTo(x+w, y, x+w, y+r);
+    ctx.lineTo(x+w, y+h);
+    ctx.lineTo(x, y+h);
+    ctx.lineTo(x, y+r);
+    ctx.quadraticCurveTo(x, y, x+r, y);
+    ctx.closePath();
+  }
+
+  function drawChart(dates, byDate, maxVal) {
+    const canvas = document.getElementById('report-canvas');
+    const dpr  = window.devicePixelRatio || 1;
+    const W    = canvas.offsetWidth  || 320;
+    const H    = canvas.offsetHeight || 180;
+    canvas.width  = W * dpr;
+    canvas.height = H * dpr;
+    const ctx  = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    const pad = { top:14, right:10, bottom:28, left:26 };
+    const cW  = W - pad.left - pad.right;
+    const cH  = H - pad.top  - pad.bottom;
+
+    ctx.clearRect(0, 0, W, H);
+
+    if (!dates.length) {
+      ctx.fillStyle = 'rgba(255,255,255,0.3)';
+      ctx.font = '13px -apple-system, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('No swears yet this month 😇', W/2, H/2);
+      return;
+    }
+
+    // Grid
+    const steps = Math.min(maxVal, 5);
+    for (let s = 0; s <= steps; s++) {
+      const v = Math.round((s / steps) * maxVal);
+      const y = pad.top + cH - (v / maxVal) * cH;
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+      if (s > 0) {
+        ctx.fillStyle = 'rgba(255,255,255,0.3)';
+        ctx.font = `10px -apple-system, sans-serif`;
+        ctx.textAlign = 'right';
+        ctx.fillText(v, pad.left - 4, y + 4);
+      }
+    }
+
+    const barW = Math.max(5, Math.floor(cW / dates.length * 0.68));
+    const step = cW / dates.length;
+
+    dates.forEach((date, i) => {
+      const x       = pad.left + i * step + (step - barW) / 2;
+      const dayData = byDate[date] || {};
+      let yOff      = pad.top + cH;
+      let totalDay  = KIDS.reduce((s,k) => s + (dayData[k]??0), 0);
+      if (totalDay === 0) return;
+
+      KIDS.forEach(kid => {
+        const count = dayData[kid] ?? 0;
+        if (!count) return;
+        const bH = (count / maxVal) * cH;
+        yOff -= bH;
+        ctx.fillStyle = COLOR_HEX[kid] ?? '#888';
+        rrect(ctx, x, yOff, barW, bH, 3);
+        ctx.fill();
+      });
+
+      const dayNum  = parseInt(date.split('-')[2]);
+      const showLbl = dates.length <= 16 || dayNum % Math.ceil(dates.length / 16) === 0 || dayNum === 1;
+      if (showLbl) {
+        ctx.fillStyle  = 'rgba(255,255,255,0.35)';
+        ctx.font       = `10px -apple-system, sans-serif`;
+        ctx.textAlign  = 'center';
+        ctx.fillText(dayNum, x + barW/2, H - 8);
+      }
+    });
+  }
+
+  function drawTotalsChart(kids, totals, maxVal) {
+    const canvas = document.getElementById('report-canvas');
+    const dpr = window.devicePixelRatio || 1;
+    const W   = canvas.offsetWidth  || 320;
+    const H   = canvas.offsetHeight || 180;
+    canvas.width  = W * dpr;
+    canvas.height = H * dpr;
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    const pad = { top:14, right:10, bottom:28, left:26 };
+    const cW  = W - pad.left - pad.right;
+    const cH  = H - pad.top  - pad.bottom;
+    ctx.clearRect(0,0,W,H);
+
+    // Grid
+    const steps = Math.min(maxVal, 5);
+    for (let s = 0; s <= steps; s++) {
+      const v = Math.round((s/steps)*maxVal);
+      const y = pad.top + cH - (v/maxVal)*cH;
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(pad.left,y); ctx.lineTo(W-pad.right,y); ctx.stroke();
+      if (s > 0) {
+        ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.font = '10px -apple-system,sans-serif'; ctx.textAlign = 'right';
+        ctx.fillText(v, pad.left-4, y+4);
+      }
+    }
+
+    const barW = Math.max(16, Math.floor(cW / kids.length * 0.55));
+    const step = cW / kids.length;
+
+    kids.forEach((kid, i) => {
+      const count = totals[kid] ?? 0;
+      const x = pad.left + i * step + (step - barW) / 2;
+      const bH = (count / maxVal) * cH;
+      const y  = pad.top + cH - bH;
+      ctx.fillStyle = COLOR_HEX[kid] ?? '#888';
+      rrect(ctx, x, y, barW, Math.max(bH, 2), 4);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.font = '10px -apple-system,sans-serif'; ctx.textAlign = 'center';
+      ctx.fillText(kid.slice(0,4), x + barW/2, H - 8);
+    });
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  SETTINGS
+  // ══════════════════════════════════════════════════════
+  function renderSettings() {
+    document.getElementById('settings-list').innerHTML = settings.map((s, i) => `
+      <div class="settings-card" data-idx="${i}">
+        <div class="settings-row-top">
+          <div class="settings-slot-emoji">${SLOT_EMOJI[i] ?? '🧒'}</div>
+          <input class="settings-name-input" type="text" value="${escHtml(s.name)}"
+            placeholder="Name" maxlength="20" data-field="name" data-idx="${i}" />
+          <div class="settings-color-wrap">
+            <div class="settings-color-swatch" id="swatch-${i}" style="background:${s.color}"></div>
+            <input class="settings-color-input" type="color" value="${s.color}" data-field="color" data-idx="${i}"
+              oninput="document.getElementById('swatch-${i}').style.background=this.value" />
+          </div>
+          ${settings.length > 1
+            ? `<button class="settings-delete-btn" onclick="deleteSettingsRow(${i})" title="Remove">×</button>`
+            : `<div style="width:30px"></div>`}
+        </div>
+        <div class="settings-row-pay">
+          <div class="settings-pay-icon">💳</div>
+          <input class="settings-pay-input" type="text"
+            value="${escHtml(s.paymentInfo ?? '')}"
+            placeholder="Apple Pay phone, Venmo @handle, CashApp $tag…"
+            maxlength="80" data-field="pay" data-idx="${i}" />
+        </div>
+      </div>`).join('');
+  }
+
+  function addSettingsRow() {
+    if (settings.length >= 10) { toast('Max 10 people!'); return; }
+    settings.push({ name:`Person ${settings.length + 1}`, color: PALETTE[settings.length % PALETTE.length], paymentInfo:'' });
+    renderSettings();
+    document.getElementById('settings-list').lastElementChild
+      ?.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }
+
+  function deleteSettingsRow(idx) {
+    if (settings.length <= 1) return;
+    const name = settings[idx].name;
+    settings.splice(idx, 1);
+    renderSettings();
+    toast(`Removed ${name}`);
+  }
+
+  function saveSettingsFromForm() {
+    const nameInputs = document.querySelectorAll('.settings-name-input');
+    const colorInputs= document.querySelectorAll('.settings-color-input');
+    const payInputs  = document.querySelectorAll('.settings-pay-input');
+    const oldKids    = [...KIDS];
+
+    nameInputs.forEach((inp,i)  => { settings[i].name        = inp.value.trim() || `Person ${i+1}`; });
+    colorInputs.forEach((inp,i) => { settings[i].color       = inp.value; });
+    payInputs.forEach((inp,i)   => { settings[i].paymentInfo = inp.value.trim(); });
+
+    saveSettings(settings);
+
+    KIDS      = settings.map(s => s.name);
+    COLORS    = Object.fromEntries(settings.map(s => [s.name, s.color]));
+    COLOR_HEX = Object.fromEntries(settings.map(s => [s.name, s.color]));
+    EMOJI     = Object.fromEntries(settings.map((s,i) => [s.name, SLOT_EMOJI[i] ?? '🧒']));
+    PAY_INFO  = Object.fromEntries(settings.map(s => [s.name, s.paymentInfo ?? '']));
+
+    const newState = { kids:{}, history:state.history, monthlyResults:state.monthlyResults };
+    KIDS.forEach((name,i) => {
+      const oldName = oldKids[i];
+      newState.kids[name] = (oldName && state.kids[oldName])
+        ? state.kids[oldName]
+        : (state.kids[name] ?? { amount:0, swears:0 });
+    });
+    state = newState;
+    save();
+    renderSettings();
+    render();
+    toast('Settings saved! ✅');
+  }
+
+  // ══════════════════════════════════════════════════════
   //  NAVIGATION
-  // ══════════════════════════════════════════
+  // ══════════════════════════════════════════════════════
   function switchView(v) {
     document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('active'));
     document.getElementById(`view-${v}`).classList.add('active');
     document.getElementById(`tab-${v}`).classList.add('active');
-    if (v === 'history') renderHistory();
+    if (v === 'history')  renderHistory();
+    if (v === 'settings') renderSettings();
+    if (v === 'reports')  { reportMonthIndex = 0; renderReports(); }
   }
 
-  // ══════════════════════════════════════════
+  // ══════════════════════════════════════════════════════
   //  TOAST
-  // ══════════════════════════════════════════
-  let _toastTimer;
+  // ══════════════════════════════════════════════════════
+  let _tt;
   function toast(msg) {
     const el = document.getElementById('toast');
-    el.textContent = msg;
-    el.classList.add('show');
-    clearTimeout(_toastTimer);
-    _toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+    el.textContent = msg; el.classList.add('show');
+    clearTimeout(_tt); _tt = setTimeout(() => el.classList.remove('show'), 2500);
   }
 
-  // ══════════════════════════════════════════
+  // ══════════════════════════════════════════════════════
   //  SERVICE WORKER
-  // ══════════════════════════════════════════
+  // ══════════════════════════════════════════════════════
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
 
-  // ══════════════════════════════════════════
+  // ══════════════════════════════════════════════════════
   //  INIT
-  // ══════════════════════════════════════════
+  // ══════════════════════════════════════════════════════
   render();
   </script>
 </body>
