@@ -730,7 +730,7 @@
       <!-- Alexa Integration — admin only -->
       <div id="alexa-section" style="display:none">
         <div class="settings-section-label" style="margin-top:8px">Alexa Integration</div>
-        <div class="settings-section-hint">Connect an Alexa skill so you can say <em>"Alexa, tell swear jar to charge Delaney"</em> and it logs instantly.</div>
+        <div class="settings-section-hint">Connect an Alexa skill so you can say <em>"Alexa, tell slyder swear jar to charge Delaney"</em> and it logs a $10 charge instantly.</div>
         <div class="alexa-card">
 
           <!-- Status -->
@@ -769,10 +769,11 @@
             <div class="alexa-field-label">Quick Setup</div>
             <div class="alexa-setup-steps">
               <div class="alexa-step"><div class="alexa-step-num">1</div><div>Open Alexa Developer Console → Create skill → Custom + Alexa-hosted (Node.js)</div></div>
-              <div class="alexa-step"><div class="alexa-step-num">2</div><div>Set invocation name to <strong>swear jar</strong></div></div>
+              <div class="alexa-step"><div class="alexa-step-num">2</div><div>Set invocation name to <strong>slyder swear jar</strong> (unique — avoids conflict with other "Swear Jar" skills)</div></div>
               <div class="alexa-step"><div class="alexa-step-num">3</div><div>Paste <code>interaction-model.json</code> into JSON Editor → Build Model</div></div>
-              <div class="alexa-step"><div class="alexa-step-num">4</div><div>Paste <code>index.js</code> into Code tab, update <code>FIREBASE_DB_URL</code> → Deploy</div></div>
-              <div class="alexa-step"><div class="alexa-step-num">5</div><div>Copy Skill ID from the URL → paste above → Save Settings</div></div>
+              <div class="alexa-step"><div class="alexa-step-num">4</div><div>Paste <code>index.js</code> into Code tab → Deploy</div></div>
+              <div class="alexa-step"><div class="alexa-step-num">5</div><div>⚠️ <strong>Your Alexa device must be signed into the same Amazon account as the Developer Console</strong> — dev skills only work for the dev account</div></div>
+              <div class="alexa-step"><div class="alexa-step-num">6</div><div>Copy Skill ID from the URL → paste above → Save Settings</div></div>
             </div>
           </div>
 
@@ -861,6 +862,14 @@
   // ══════════════════════════════════════════════════════
   //  FIREBASE REAL-TIME SYNC
   // ══════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════
+  //  GLOBAL CONFIG
+  // ══════════════════════════════════════════════════════
+  // Amount charged per swear (in dollars)
+  const CHARGE_AMOUNT = 1;
+  // Maximum a single user can charge others in one calendar day (EST)
+  const DAILY_LIMIT = 10;
+
   const FB_CONFIG_KEY = 'swearjar2-firebase';
   let fbDb = null, fbConnected = false, fbFirstLoadDone = false, _fbSyncTimeout = null;
   let _fbInitialized = false; // guard against double-registration
@@ -1112,18 +1121,18 @@
     const el = document.getElementById('alexa-examples');
     if (!el) return;
     const examples = KIDS.map(k => ({
-      wake: 'Alexa, tell swear jar to',
+      wake: 'Alexa, tell slyder swear jar to',
       cmd:  `charge ${k}`
     }));
-    // Show first 3 examples
+    // Show first 3 examples + an alternate phrasing
     el.innerHTML = examples.slice(0, 3).map(e =>
       `<div class="alexa-example-row">
         <span class="wake">${e.wake}</span>
         <span class="command"> ${e.cmd}</span>
       </div>`
     ).join('') + `<div class="alexa-example-row">
-      <span class="wake">Alexa, ask swear jar to</span>
-      <span class="command"> add one to ${KIDS[0]||'Delaney'}</span>
+      <span class="wake">Alexa, ask slyder swear jar to</span>
+      <span class="command"> charge ${KIDS[0]||'Delaney'} ten dollars</span>
     </div>`;
   }
 
@@ -1142,10 +1151,11 @@
     const entry = state.history[idx];
     if (!entry || !canDeleteEntry(entry)) { toast('⛔ You can\'t delete this entry'); return; }
     const { kid, addedBy, ts } = entry;
+    const entryAmt = entry.amount || 1; // backward compat with old $1 entries
 
     // Reverse the fee
     if (state.kids[kid]) {
-      state.kids[kid].amount = Math.max(0, state.kids[kid].amount - 1);
+      state.kids[kid].amount = Math.max(0, state.kids[kid].amount - entryAmt);
       state.kids[kid].swears = Math.max(0, state.kids[kid].swears - 1);
     }
 
@@ -1159,6 +1169,7 @@
       deletedBy: currentUser,
       originalAddedBy: addedBy,
       originalTs: ts,
+      originalAmount: entryAmt,
       ts: new Date().toISOString()
     });
 
@@ -1166,6 +1177,32 @@
     save();
     render();
     toast(`🗑️ Deleted ${kid}'s entry`);
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  DAILY CHARGE LIMIT
+  // ══════════════════════════════════════════════════════
+  function getEstTodayStr() {
+    const now = new Date();
+    const est = new Date(now.toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    const pad = n => String(n).padStart(2,'0');
+    return `${est.getFullYear()}-${pad(est.getMonth()+1)}-${pad(est.getDate())}`;
+  }
+
+  // Returns how many dollars `user` has charged others today (EST)
+  function getTodayChargedBy(user) {
+    if (!user) return 0;
+    const todayStr = getEstTodayStr();
+    let total = 0;
+    (state.history || []).forEach(entry => {
+      if (entry.type === 'deletion' || entry.addedBy !== user || !entry.ts) return;
+      // Convert UTC timestamp to EST date string
+      const entryEst = new Date(new Date(entry.ts).toLocaleString('en-US', { timeZone: 'America/New_York' }));
+      const pad = n => String(n).padStart(2,'0');
+      const entryDate = `${entryEst.getFullYear()}-${pad(entryEst.getMonth()+1)}-${pad(entryEst.getDate())}`;
+      if (entryDate === todayStr) total += (entry.amount || 1);
+    });
+    return total;
   }
 
   // ══════════════════════════════════════════════════════
@@ -1759,26 +1796,37 @@
   //  ACTIONS
   // ══════════════════════════════════════════════════════
   function addSwear(kid) {
+    // Enforce daily charge limit ($10 max per user per day)
+    const todayCharged = getTodayChargedBy(currentUser);
+    if (todayCharged >= DAILY_LIMIT) {
+      toast(`🔒 You've hit your $${DAILY_LIMIT}/day limit — try again tomorrow!`);
+      return;
+    }
     if (!state.kids[kid]) state.kids[kid] = { amount:0, swears:0 };
-    state.kids[kid].amount++;
+    state.kids[kid].amount += CHARGE_AMOUNT;
     state.kids[kid].swears++;
-    state.history.unshift({ kid, ts: new Date().toISOString(), addedBy: currentUser ?? 'Unknown' });
+    state.history.unshift({ kid, ts: new Date().toISOString(), addedBy: currentUser ?? 'Unknown', amount: CHARGE_AMOUNT });
     if (state.history.length > 500) state.history.length = 500;
     save(); render();
-    toast(`${kid} owes $1 💸`);
+    const remaining = DAILY_LIMIT - (todayCharged + CHARGE_AMOUNT);
+    toast(remaining > 0 ? `${kid} owes $1 💸 · $${remaining} left today` : `${kid} owes $1 💸 · Daily limit reached!`);
     const card = document.querySelector(`[data-kid="${kid}"]`);
     if (card) { card.classList.remove('pulse'); void card.offsetWidth; card.classList.add('pulse'); }
   }
 
   function undoLast() {
     if (!state.history.length) { toast('Nothing to undo!'); return; }
-    const { kid } = state.history.shift();
-    if (state.kids[kid]) {
-      state.kids[kid].amount = Math.max(0, state.kids[kid].amount-1);
-      state.kids[kid].swears = Math.max(0, state.kids[kid].swears-1);
+    // Skip deletion log entries at the front
+    const firstReal = state.history.findIndex(e => e.type !== 'deletion');
+    if (firstReal === -1) { toast('Nothing to undo!'); return; }
+    const entry = state.history.splice(firstReal, 1)[0];
+    const entryAmt = entry.amount || 1; // backward compat with old $1 entries
+    if (state.kids[entry.kid]) {
+      state.kids[entry.kid].amount = Math.max(0, state.kids[entry.kid].amount - entryAmt);
+      state.kids[entry.kid].swears = Math.max(0, state.kids[entry.kid].swears - 1);
     }
     save(); render();
-    toast(`Undid ${kid}'s swear ↩`);
+    toast(`Undid ${entry.kid}'s charge ↩`);
   }
 
   function openEndMonth() {
@@ -1895,6 +1943,9 @@
       dltEl.className = 'days-left-text' + (left <= 2 ? ' urgent' : '');
       if (dlfEl) dlfEl.style.width = pct + '%';
     }
+    const todayCharged   = getTodayChargedBy(currentUser);
+    const dailyLimitHit  = todayCharged >= DAILY_LIMIT;
+    const dailyRemaining = Math.max(0, DAILY_LIMIT - todayCharged);
     document.getElementById('kids-grid').innerHTML = KIDS.map(kid=>{
       const {amount=0,swears=0}=state.kids[kid]??{};
       const isLeading=pot>0&&winners.includes(kid), isWorst=worst.includes(kid);
@@ -1909,7 +1960,11 @@
           <div class="kid-amount">$${amount}</div>
           <div class="kid-count">${swears} swear${swears!==1?'s':''}</div>
           ${streak >= 3 ? `<div class="streak-badge">🔥 ${streak >= 30 ? '30+' : streak}-day streak!</div>` : ''}
-          <button class="swear-btn" onclick="addSwear('${escHtml(kid)}')">🤬 +$1</button>
+          ${dailyLimitHit
+            ? `<button class="swear-btn" disabled
+                style="opacity:.4;cursor:not-allowed;font-size:11px;background:#555;letter-spacing:-0.2px"
+                title="$${DAILY_LIMIT} daily charge limit reached">🔒 Daily limit reached</button>`
+            : `<button class="swear-btn" onclick="addSwear('${escHtml(kid)}')">🤬 +$1${dailyRemaining < DAILY_LIMIT ? ` · $${dailyRemaining} left` : ''}</button>`}
         </div>`;
     }).join('');
     const recent=state.history.slice(0,20), actEl=document.getElementById('activity-list');
@@ -1930,7 +1985,7 @@
               </div>
               <div class="activity-right">
                 <div class="activity-time">${relativeTime(entry.ts)}</div>
-                <div class="activity-badge deleted">-$1</div>
+                <div class="activity-badge deleted">-$${entry.originalAmount || entry.amount || 1}</div>
               </div>
             </div>`;
         }
@@ -1951,7 +2006,7 @@
               <div class="activity-time">${relativeTime(ts)}</div>
               ${isDisputed
                 ? `<div class="activity-badge disputed-badge">🚩 Disputed</div>`
-                : `<div class="activity-badge">+$1</div>`}
+                : `<div class="activity-badge">+$${entry.amount || 1}</div>`}
               ${canDispute ? `<button class="activity-dispute-btn" onclick="disputeActivity(${idx})" title="Flag charge as disputed">🚩</button>` : ''}
               ${canDel ? `<button class="activity-del-btn" onclick="deleteActivity(${idx})" title="Delete this entry">🗑️</button>` : ''}
             </div>

@@ -1,11 +1,11 @@
 {
   "interactionModel": {
     "languageModel": {
-      "invocationName": "swear jar",
+      "invocationName": "slyder swear jar",
       "intents": [
         {
           "name": "ChargeKidIntent",
-          "description": "Charges a kid one dollar by name",
+          "description": "Charges a kid ten dollars by name",
           "slots": [
             {
               "name": "KidName",
@@ -13,15 +13,15 @@
               "samples": [
                 "{KidName}",
                 "charge {KidName}",
-                "charge {KidName} a dollar",
-                "add one to {KidName}",
-                "add a dollar to {KidName}",
+                "charge {KidName} ten dollars",
+                "add ten to {KidName}",
+                "add ten dollars to {KidName}",
                 "{KidName} swore",
                 "{KidName} said a bad word",
                 "fine {KidName}",
-                "fine {KidName} a dollar",
-                "{KidName} owes a dollar",
-                "put a dollar on {KidName}",
+                "fine {KidName} ten dollars",
+                "{KidName} owes ten dollars",
+                "put ten on {KidName}",
                 "log one for {KidName}",
                 "log a swear for {KidName}",
                 "mark one for {KidName}",
@@ -31,15 +31,15 @@
           ],
           "samples": [
             "charge {KidName}",
-            "charge {KidName} a dollar",
-            "add one to {KidName}",
-            "add a dollar to {KidName}",
+            "charge {KidName} ten dollars",
+            "add ten to {KidName}",
+            "add ten dollars to {KidName}",
             "{KidName} swore",
             "{KidName} said a bad word",
             "fine {KidName}",
-            "fine {KidName} a dollar",
-            "{KidName} owes a dollar",
-            "put a dollar on {KidName}",
+            "fine {KidName} ten dollars",
+            "{KidName} owes ten dollars",
+            "put ten on {KidName}",
             "log one for {KidName}",
             "log a swear for {KidName}",
             "mark one for {KidName}",

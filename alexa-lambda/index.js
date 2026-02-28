@@ -38,8 +38,8 @@ const STATE_PATH = `${SWEARJAR_PATH}/gameState.json`;
 // The path where jar settings (kid names) are stored
 const SETTINGS_PATH = `${SWEARJAR_PATH}/jarSettings.json`;
 
-// Amount charged per swear (in dollars)
-const CHARGE_AMOUNT = 1;
+// Amount charged per swear (in dollars) — must match CHARGE_AMOUNT in the PWA
+const CHARGE_AMOUNT = 10;
 
 // Fallback kid names — used only if Firebase settings can't be fetched
 const FALLBACK_KID_NAMES = {
@@ -203,22 +203,22 @@ const ChargeKidIntentHandler = {
         .getResponse();
     }
 
-    // ── Update kid's balance ──
+    // ── Update kid's balance (use display name as key, matching the PWA) ──
     const kids = state.kids || {};
-    if (!kids[normalized]) {
-      kids[normalized] = { amount: 0, swears: 0 };
+    if (!kids[kidKey]) {
+      kids[kidKey] = { amount: 0, swears: 0 };
     }
-    kids[normalized].amount = (kids[normalized].amount || 0) + CHARGE_AMOUNT;
-    kids[normalized].swears = (kids[normalized].swears || 0) + 1;
+    kids[kidKey].amount = (kids[kidKey].amount || 0) + CHARGE_AMOUNT;
+    kids[kidKey].swears = (kids[kidKey].swears || 0) + 1;
 
     // ── Prepend history entry ──
     const history      = fbToArray(state.history);
     const now          = new Date().toISOString();
     const newEntry     = {
-      kid:       normalized,
-      amount:    CHARGE_AMOUNT,
-      timestamp: now,
-      addedBy:   'Alexa',
+      kid:     kidKey,   // use display name (matches PWA format)
+      amount:  CHARGE_AMOUNT,
+      ts:      now,      // match PWA field name
+      addedBy: 'Alexa',
     };
     history.unshift(newEntry);
 
@@ -239,9 +239,9 @@ const ChargeKidIntentHandler = {
     }
 
     // ── Build confirmation response ──
-    const newTotal  = kids[normalized].amount;
+    const newTotal  = kids[kidKey].amount;
     const speechText =
-      `Got it! I charged ${kidKey} one dollar. ` +
+      `Got it! I charged ${kidKey} $${CHARGE_AMOUNT}. ` +
       `${kidKey} now owes $${newTotal} this month.`;
 
     return handlerInput.responseBuilder
@@ -286,9 +286,9 @@ const HelpIntentHandler = {
     const firstName  = Object.values(KID_NAMES)[0] || 'Delaney';
     const lastNameEx = Object.values(KID_NAMES)[Object.values(KID_NAMES).length-1] || 'Grant';
     const speechText =
-      `Say "charge" followed by a name to add one dollar. ` +
+      `Say "charge" followed by a name to add $${CHARGE_AMOUNT}. ` +
       `Valid names are: ${names}. ` +
-      `For example, say "charge ${firstName}" or "add one to ${lastNameEx}".`;
+      `For example, say "charge ${firstName}" or "charge ${lastNameEx}".`;
     return handlerInput.responseBuilder
       .speak(speechText)
       .reprompt('Who should I charge?')
