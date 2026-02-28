@@ -931,9 +931,10 @@
   //  ALEXA INTEGRATION HELPERS
   // ══════════════════════════════════════════════════════
   const ALEXA_SKILL_KEY = 'swearjar2-alexa-skill-id';
+  const BUILT_IN_ALEXA_SKILL_ID = 'amzn1.ask.skill.e83aeca2-900d-4e36-9a37-7cb240a09323';
 
   function loadAlexaSkillId() {
-    return localStorage.getItem(ALEXA_SKILL_KEY) || '';
+    return localStorage.getItem(ALEXA_SKILL_KEY) || BUILT_IN_ALEXA_SKILL_ID;
   }
 
   function saveAlexaSkillId(id) {
