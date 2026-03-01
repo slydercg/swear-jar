@@ -405,7 +405,7 @@
     .modal-cancel    { width: 100%; padding: 14px; border: none; border-radius: 16px; background: var(--surface2); color: var(--muted); font-size: 15px; font-weight: 600; cursor: pointer; }
 
     /* ════════ TOAST ════════ */
-    .toast { position: fixed; top: 16px; left: 50%; transform: translateX(-50%) translateY(-80px); background: rgba(255,255,255,.12); backdrop-filter: blur(20px); color: #fff; padding: 10px 20px; border-radius: 100px; font-size: 14px; font-weight: 600; z-index: 999; border: 1px solid rgba(255,255,255,.15); transition: transform .3s cubic-bezier(.34,1.56,.64,1); white-space: nowrap; }
+    .toast { position: fixed; top: calc(16px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%) translateY(-80px); background: rgba(255,255,255,.12); backdrop-filter: blur(20px); color: #fff; padding: 10px 20px; border-radius: 100px; font-size: 14px; font-weight: 600; z-index: 999; border: 1px solid rgba(255,255,255,.15); transition: transform .3s cubic-bezier(.34,1.56,.64,1); white-space: nowrap; max-width: 90%; overflow: hidden; text-overflow: ellipsis; }
     .toast.show { transform: translateX(-50%) translateY(0); }
 
     /* ════════ PULSE ════════ */
@@ -660,8 +660,8 @@
         <div class="header-meta">
           <div class="month-chip" id="month-chip">—</div>
           <div class="sync-dot" id="sync-dot" title="Sync status"></div>
-          <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode">☀️</button>
-          <button class="user-chip" id="user-chip" onclick="promptSwitchUser()">
+          <button class="theme-toggle" id="theme-toggle" onclick="toggleTheme()" title="Toggle light/dark mode" aria-label="Toggle theme">☀️</button>
+          <button class="user-chip" id="user-chip" onclick="promptSwitchUser()" aria-label="Switch user">
             <div class="user-chip-dot" id="user-chip-dot" style="background:#888"></div>
             <span id="user-chip-name">—</span>
           </button>
@@ -1220,6 +1220,12 @@
   function deleteActivity(idx) {
     const entry = state.history[idx];
     if (!entry || !canDeleteEntry(entry)) { toast('⛔ You can\'t delete this entry'); return; }
+    
+    // Confirm before deleting
+    if (!confirm(`Delete this $${entry.amount || 1} charge for ${entry.kid}?\n\nThis will reverse the fee and create an audit log entry.`)) {
+      return;
+    }
+    
     const { kid, addedBy, ts } = entry;
     const entryAmt = entry.amount || 1; // backward compat with old $1 entries
 
@@ -1840,7 +1846,10 @@
 
   function loginCustom() {
     const val = document.getElementById('login-custom-input').value.trim();
-    if (!val) return;
+    if (!val) {
+      toast('⚠️ Please enter your name');
+      return;
+    }
     loginAs(val);
   }
 
@@ -1879,6 +1888,10 @@
       toast(`🔒 You've hit your $${DAILY_LIMIT}/day limit — try again tomorrow!`);
       return;
     }
+    // Haptic feedback on iOS
+    if (window.navigator && window.navigator.vibrate) {
+      window.navigator.vibrate(10);
+    }
     if (!state.kids[kid]) state.kids[kid] = { amount:0, swears:0 };
     state.kids[kid].amount += CHARGE_AMOUNT;
     state.kids[kid].swears++;
@@ -1891,11 +1904,14 @@
     if (card) { card.classList.remove('pulse'); void card.offsetWidth; card.classList.add('pulse'); }
   }
 
+  let _undoInProgress = false;
   function undoLast() {
+    if (_undoInProgress) return;
     if (!state.history.length) { toast('Nothing to undo!'); return; }
     // Skip deletion log entries at the front
     const firstReal = state.history.findIndex(e => e.type !== 'deletion');
     if (firstReal === -1) { toast('Nothing to undo!'); return; }
+    _undoInProgress = true;
     const entry = state.history.splice(firstReal, 1)[0];
     const entryAmt = entry.amount || 1; // backward compat with old $1 entries
     if (state.kids[entry.kid]) {
@@ -1904,6 +1920,7 @@
     }
     save(); render();
     toast(`Undid ${entry.kid}'s charge ↩`);
+    setTimeout(() => { _undoInProgress = false; }, 500);
   }
 
   function openEndMonth() {
@@ -2171,13 +2188,18 @@
     const maxVal=Math.max(1,...dates.map(dt=>KIDS.reduce((s,k)=>s+(byDate[dt]?.[k]??0),0)));
     drawChart(dates,byDate,maxVal);
     document.getElementById('chart-legend').innerHTML=KIDS.map(k=>`<div class="legend-item"><div class="legend-dot" style="background:${COLOR_HEX[k]??'#888'}"></div><span>${escHtml(k)}</span></div>`).join('');
-    document.getElementById('stats-grid').innerHTML=KIDS.map(kid=>{
-      const {amount=0,swears=0}=state.kids[kid]??{};
-      let worstDay=null,worstCount=0;
-      Object.entries(byDate).forEach(([dt,d])=>{const c=d[kid]??0;if(c>worstCount){worstCount=c;worstDay=dt;}});
-      const wl=worstDay?`Worst: ${MONTHS[parseInt(worstDay.split('-')[1])-1].slice(0,3)} ${parseInt(worstDay.split('-')[2])} (${worstCount})`:'No swears yet!';
-      return `<div class="stat-card" style="--c:${COLOR_HEX[kid]??'#888'}"><div class="stat-name">${escHtml(kid)}</div><div class="stat-swears">${swears}</div><div class="stat-label">swear${swears!==1?'s':''} = $${amount}</div><div class="stat-worst">${wl}</div></div>`;
-    }).join('');
+    const hasAnySwears = KIDS.some(kid => (state.kids[kid]?.swears ?? 0) > 0);
+    if (!hasAnySwears) {
+      document.getElementById('stats-grid').innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:32px 0;color:var(--muted)"><div style="font-size:32px;margin-bottom:8px">😇</div><div style="font-size:15px;font-weight:600">Perfect month so far!</div><div style="font-size:13px;margin-top:4px">No swears recorded yet</div></div>`;
+    } else {
+      document.getElementById('stats-grid').innerHTML=KIDS.map(kid=>{
+        const {amount=0,swears=0}=state.kids[kid]??{};
+        let worstDay=null,worstCount=0;
+        Object.entries(byDate).forEach(([dt,d])=>{const c=d[kid]??0;if(c>worstCount){worstCount=c;worstDay=dt;}});
+        const wl=worstDay?`Worst: ${MONTHS[parseInt(worstDay.split('-')[1])-1].slice(0,3)} ${parseInt(worstDay.split('-')[2])} (${worstCount})`:'No swears yet!';
+        return `<div class="stat-card" style="--c:${COLOR_HEX[kid]??'#888'}"><div class="stat-name">${escHtml(kid)}</div><div class="stat-swears">${swears}</div><div class="stat-label">swear${swears!==1?'s':''} = $${amount}</div><div class="stat-worst">${wl}</div></div>`;
+      }).join('');
+    }
   }
   function renderPastReports(r) {
     const allKids=Object.keys(r.kids);
