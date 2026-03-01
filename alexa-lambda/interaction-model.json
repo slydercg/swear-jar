@@ -59,6 +59,42 @@
           "samples": []
         },
         {
+          "name": "GetBalanceIntent",
+          "description": "Gets balance for a specific kid or all kids",
+          "slots": [
+            {
+              "name": "KidName",
+              "type": "KidNameType",
+              "samples": [
+                "{KidName}",
+                "balance of {KidName}",
+                "{KidName} balance"
+              ]
+            }
+          ],
+          "samples": [
+            "what's the balance",
+            "how much do we owe",
+            "what's the pot",
+            "check balance",
+            "check {KidName} balance",
+            "what does {KidName} owe",
+            "how much does {KidName} owe"
+          ]
+        },
+        {
+          "name": "GetLeaderboardIntent",
+          "description": "Shows who owes the most",
+          "slots": [],
+          "samples": [
+            "who owes the most",
+            "who's winning",
+            "leaderboard",
+            "standings",
+            "show me the leaderboard"
+          ]
+        },
+        {
           "name": "AMAZON.FallbackIntent",
           "samples": []
         },

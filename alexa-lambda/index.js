@@ -152,8 +152,106 @@ const ChargeKidIntentHandler = {
     }
 
     const newTotal = kids[kidKey].amount;
+    const potTotal = Object.values(kids).reduce((sum, k) => sum + (k.amount || 0), 0);
     return handlerInput.responseBuilder
-      .speak('Got it! I charged ' + kidKey + ' one dollar. ' + kidKey + ' now owes $' + newTotal + ' this month.')
+      .speak(kidKey + ' now owes $' + newTotal + '. The pot is up to $' + potTotal + '.')
+      .getResponse();
+  },
+};
+
+// ─── GET BALANCE HANDLER ───────────────────────────────────────────────────
+
+const GetBalanceIntentHandler = {
+  canHandle(handlerInput) {
+    return (
+      Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
+      Alexa.getIntentName(handlerInput.requestEnvelope) === 'GetBalanceIntent'
+    );
+  },
+  async handle(handlerInput) {
+    const slots = handlerInput.requestEnvelope.request.intent.slots;
+    const rawName = (slots.KidName && slots.KidName.value) || '';
+    const normalized = rawName.trim().toLowerCase();
+
+    const KID_NAMES = await fetchKidNames();
+    const kidKey = KID_NAMES[normalized];
+
+    if (!kidKey && rawName) {
+      const validNames = Object.values(KID_NAMES).join(', ');
+      return handlerInput.responseBuilder
+        .speak('I didn\'t recognize "' + rawName + '". Valid names are ' + validNames + '. Whose balance do you want?')
+        .reprompt('Whose balance do you want to know?')
+        .getResponse();
+    }
+
+    let state;
+    try {
+      state = await readState();
+    } catch (err) {
+      console.error('Firebase read error:', err);
+      return handlerInput.responseBuilder
+        .speak('Sorry, I had trouble connecting to the swear jar.')
+        .getResponse();
+    }
+
+    const kids = state.kids || {};
+
+    if (rawName) {
+      // Specific person's balance
+      const balance = kids[kidKey] ? kids[kidKey].amount : 0;
+      return handlerInput.responseBuilder
+        .speak(kidKey + ' owes $' + balance + '.')
+        .getResponse();
+    } else {
+      // All balances
+      const balances = Object.entries(kids)
+        .map(([name, data]) => name + ' owes $' + (data.amount || 0))
+        .join(', ');
+      const potTotal = Object.values(kids).reduce((sum, k) => sum + (k.amount || 0), 0);
+      return handlerInput.responseBuilder
+        .speak('The pot is $' + potTotal + '. ' + (balances || 'Everyone owes nothing.'))
+        .getResponse();
+    }
+  },
+};
+
+// ─── GET LEADERBOARD HANDLER ───────────────────────────────────────────────
+
+const GetLeaderboardIntentHandler = {
+  canHandle(handlerInput) {
+    return (
+      Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
+      Alexa.getIntentName(handlerInput.requestEnvelope) === 'GetLeaderboardIntent'
+    );
+  },
+  async handle(handlerInput) {
+    let state;
+    try {
+      state = await readState();
+    } catch (err) {
+      console.error('Firebase read error:', err);
+      return handlerInput.responseBuilder
+        .speak('Sorry, I had trouble connecting to the swear jar.')
+        .getResponse();
+    }
+
+    const kids = state.kids || {};
+    const sorted = Object.entries(kids)
+      .sort((a, b) => (b[1].amount || 0) - (a[1].amount || 0));
+
+    if (sorted.length === 0) {
+      return handlerInput.responseBuilder
+        .speak('No one is in the jar yet.')
+        .getResponse();
+    }
+
+    const leaderboard = sorted
+      .slice(0, 5)
+      .map(([name, data], idx) => (idx + 1) + '. ' + name + ' owes $' + (data.amount || 0))
+      .join('. ');
+
+    return handlerInput.responseBuilder
+      .speak('Here\'s the leaderboard. ' + leaderboard)
       .getResponse();
   },
 };
@@ -241,6 +339,8 @@ exports.handler = Alexa.SkillBuilders.custom()
   .addRequestHandlers(
     LaunchRequestHandler,
     ChargeKidIntentHandler,
+    GetBalanceIntentHandler,
+    GetLeaderboardIntentHandler,
     HelpIntentHandler,
     CancelAndStopIntentHandler,
     SessionEndedRequestHandler,
