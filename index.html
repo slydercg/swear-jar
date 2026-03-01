@@ -14,6 +14,8 @@
   <title>Slyder Swear Jar 🤐</title>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <!-- QR Code Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -622,6 +624,49 @@
       padding: 6px 8px; border: none; background: none; color: var(--muted);
       font-size: 18px; cursor: pointer; flex-shrink: 0; -webkit-appearance: none;
     }
+
+    /* ════════ QR CODE MODAL ════════ */
+    .qr-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,.85);
+      z-index: 999; align-items: center; justify-content: center; padding: 20px;
+    }
+    body.light-mode .qr-overlay {
+      background: rgba(0,0,0,.6);
+    }
+    .qr-overlay.open { display: flex; }
+    .qr-card {
+      background: var(--surface); border-radius: 28px; padding: 28px 24px;
+      width: 100%; max-width: 360px; text-align: center;
+      box-shadow: 0 0 60px rgba(124,77,255,.25);
+      border: 1px solid rgba(124,77,255,.2);
+    }
+    .qr-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .qr-title { font-size: 20px; font-weight: 900; flex: 1; text-align: left; }
+    .qr-close { width: 32px; height: 32px; border-radius: 50%; border: none; background: var(--surface2); color: var(--muted); font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; -webkit-appearance: none; }
+    .qr-close:active { background: var(--border); }
+    .qr-recipient { font-size: 14px; color: var(--muted); margin-bottom: 20px; }
+    .qr-recipient-name { font-weight: 700; color: var(--text); }
+    .qr-code-container { background: #fff; border-radius: 16px; padding: 20px; margin: 0 auto 20px; display: inline-block; box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+    .qr-code-container canvas { display: block !important; }
+    .qr-amount { font-size: 32px; font-weight: 900; margin-bottom: 8px; background: linear-gradient(135deg, var(--purple), var(--pink)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    .qr-instructions { font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
+    .qr-actions { display: flex; flex-direction: column; gap: 10px; }
+    .qr-btn-primary {
+      width: 100%; padding: 14px; border: none; border-radius: 14px;
+      background: linear-gradient(135deg, var(--purple), var(--pink));
+      color: #fff; font-size: 15px; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      -webkit-appearance: none; text-decoration: none;
+    }
+    .qr-btn-primary:active { opacity: .85; }
+    .qr-btn-secondary {
+      width: 100%; padding: 12px; border: none; border-radius: 14px;
+      background: var(--surface2); color: var(--text);
+      font-size: 14px; font-weight: 600; cursor: pointer; -webkit-appearance: none;
+    }
+    .qr-btn-secondary:active { background: var(--border); }
+    .qr-payment-type { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 4px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .qr-payment-type-icon { font-size: 14px; }
   </style>
 </head>
 <body>
@@ -873,6 +918,32 @@
       </div>
       <div class="pin-error" id="pin-error"></div>
       <button class="pin-cancel" onclick="closePinModal()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- ═══════════ QR CODE PAYMENT MODAL ═══════════ -->
+  <div id="qr-overlay" class="qr-overlay" onclick="closeQrModal(event)">
+    <div class="qr-card" onclick="event.stopPropagation()">
+      <div class="qr-header">
+        <div class="qr-title">Scan to Pay</div>
+        <button class="qr-close" onclick="closeQrModal()">×</button>
+      </div>
+      <div class="qr-payment-type" id="qr-payment-type"></div>
+      <div class="qr-recipient">
+        Pay <span class="qr-recipient-name" id="qr-recipient-name"></span>
+      </div>
+      <div class="qr-code-container">
+        <div id="qr-code"></div>
+      </div>
+      <div class="qr-amount" id="qr-amount"></div>
+      <div class="qr-instructions" id="qr-instructions"></div>
+      <div class="qr-actions">
+        <a id="qr-open-app" class="qr-btn-primary" target="_blank" rel="noopener">
+          <span id="qr-app-icon"></span>
+          <span id="qr-app-text">Open App</span>
+        </a>
+        <button class="qr-btn-secondary" onclick="copyPaymentInfo()">📋 Copy Payment Info</button>
+      </div>
     </div>
   </div>
 
@@ -1502,6 +1573,108 @@
   }
 
   // ══════════════════════════════════════════════════════
+  //  QR CODE PAYMENT MODAL
+  // ══════════════════════════════════════════════════════
+  let _currentQrData = null;
+
+  function showQrPayment(name, amount, paymentType, paymentInfo) {
+    if (!paymentInfo || !paymentType) {
+      toast('⚠️ No payment info configured for ' + name);
+      return;
+    }
+
+    const pt = PAYMENT_TYPES.find(p => p.id === paymentType);
+    if (!pt) return;
+
+    // Build payment URL
+    let paymentUrl = '';
+    const amt = parseFloat(amount).toFixed(2);
+    const note = `Swear Jar – ${new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}`;
+    
+    switch (paymentType) {
+      case 'venmo':
+        // Venmo payment request URL
+        paymentUrl = `https://venmo.com/?txn=charge&audience=private&recipients=${encodeURIComponent(paymentInfo.replace(/^@/, ''))}&amount=${amt}&note=${encodeURIComponent(note)}`;
+        break;
+      case 'applepay':
+        // Apple Pay Cash (requires phone number)
+        // Note: Apple Pay Cash URLs only work on iOS devices
+        paymentUrl = `https://cash.me/$${paymentInfo.replace(/[^\d]/g, '')}/${amt}`;
+        break;
+      case 'paypal':
+        paymentUrl = `https://paypal.me/${paymentInfo.replace(/^@/, '')}/${amt}`;
+        break;
+      case 'zelle':
+        // Zelle doesn't have a universal web URL, show info for manual entry
+        paymentUrl = null;
+        break;
+    }
+
+    _currentQrData = { name, amount, paymentType, paymentInfo, paymentUrl };
+
+    // Update modal content
+    document.getElementById('qr-payment-type').innerHTML = `
+      <span class="qr-payment-type-icon">${pt.icon}</span>
+      <span>${pt.label}</span>
+    `;
+    document.getElementById('qr-recipient-name').textContent = name;
+    document.getElementById('qr-amount').textContent = `$${amount}`;
+
+    // Set instructions based on payment type
+    const instructions = {
+      venmo: 'Open Venmo app and scan this QR code, or tap "Open App" below to pay automatically.',
+      applepay: 'This will open Apple Pay Cash. Make sure you have it set up in Wallet.',
+      paypal: 'Open PayPal app and scan this QR code, or tap "Open App" to pay directly.',
+      zelle: 'Open your banking app and send via Zelle using the info below.'
+    };
+    document.getElementById('qr-instructions').textContent = instructions[paymentType] || 'Scan this code with your payment app.';
+
+    // Generate QR code
+    const qrContainer = document.getElementById('qr-code');
+    qrContainer.innerHTML = ''; // Clear previous QR code
+    
+    const qrData = paymentUrl || paymentInfo; // Use payment info if no URL
+    new QRCode(qrContainer, {
+      text: qrData,
+      width: 200,
+      height: 200,
+      colorDark: '#000000',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.H
+    });
+
+    // Set up "Open App" button
+    const openBtn = document.getElementById('qr-open-app');
+    const appIcon = document.getElementById('qr-app-icon');
+    const appText = document.getElementById('qr-app-text');
+    
+    if (paymentUrl) {
+      openBtn.href = paymentUrl;
+      openBtn.style.display = 'flex';
+      appIcon.textContent = pt.icon;
+      appText.textContent = `Open ${pt.label}`;
+    } else {
+      openBtn.style.display = 'none';
+    }
+
+    // Show modal
+    document.getElementById('qr-overlay').classList.add('open');
+  }
+
+  function closeQrModal(event) {
+    if (event && event.target !== document.getElementById('qr-overlay')) return;
+    document.getElementById('qr-overlay').classList.remove('open');
+    _currentQrData = null;
+  }
+
+  function copyPaymentInfo() {
+    if (!_currentQrData) return;
+    const { paymentInfo, name } = _currentQrData;
+    navigator.clipboard?.writeText(paymentInfo).catch(() => {});
+    toast(`📋 Copied ${name}'s payment info`);
+  }
+
+  // ══════════════════════════════════════════════════════
   //  CONSTANTS
   // ══════════════════════════════════════════════════════
   const SLOT_EMOJI   = ['👧','🧒','👦','🧑','👩','👨','🧔','👱','🧕','👲'];
@@ -1510,7 +1683,7 @@
   const MONTHS       = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
   const PAYMENT_TYPES = [
-    { id:'applepay', label:'Apple Pay', icon:'🍎', placeholder:'Phone number (e.g. 555-867-5309)' },
+    { id:'applepay', label:'Apple Pay', icon:'🍎', placeholder:'Phone number for Apple Pay Cash (e.g. 555-867-5309)' },
     { id:'venmo',    label:'Venmo',     icon:'💜', placeholder:'@handle (e.g. @markslyder)' },
     { id:'paypal',   label:'PayPal',    icon:'🔵', placeholder:'@username (e.g. @markslyder)' },
     { id:'zelle',    label:'Zelle',     icon:'⚡', placeholder:'Phone or email' },
@@ -1723,6 +1896,7 @@
             </div>
             <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
               <span style="font-size:15px;font-weight:800">$${amount}</span>
+              <button class="modal-req-btn" onclick="showQrPayment('${escHtml(name)}', ${amount}, '${type}', '${escHtml(info)}')">📱 QR</button>
               ${url ? `<a href="${url}" target="_blank" rel="noopener" class="modal-req-btn">Request ↗</a>`
                     : `<button class="modal-req-copy" onclick="copyToClipboard('${escHtml(info)}')">📋 Copy</button>`}
             </div>
@@ -1994,6 +2168,7 @@
             </div>
             <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
               <span style="font-size:15px;font-weight:800;color:var(--text)">$${amount}</span>
+              <button class="modal-req-btn" onclick="showQrPayment('${escHtml(name)}', ${amount}, '${type}', '${escHtml(info)}')">📱 QR</button>
               ${url
                 ? `<a href="${url}" target="_blank" rel="noopener" class="modal-req-btn">Request ↗</a>`
                 : `<button class="modal-req-copy" onclick="copyToClipboard('${escHtml(info)}')">📋 Copy</button>`}
