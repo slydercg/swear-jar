@@ -1506,7 +1506,6 @@
   const PAYMENT_TYPES = [
     { id:'applepay', label:'Apple Pay', icon:'🍎', placeholder:'Phone number (e.g. 555-867-5309)' },
     { id:'venmo',    label:'Venmo',     icon:'💜', placeholder:'@handle (e.g. @markslyder)' },
-    { id:'cashapp',  label:'Cash App',  icon:'💵', placeholder:'$Cashtag (e.g. $markslyder)' },
     { id:'paypal',   label:'PayPal',    icon:'🔵', placeholder:'@username (e.g. @markslyder)' },
     { id:'zelle',    label:'Zelle',     icon:'⚡', placeholder:'Phone or email' },
   ];
@@ -1520,9 +1519,8 @@
     if (!handle) return null;
     const h = handle.trim();
     switch (type) {
-      case 'venmo':   return `https://venmo.com/u/${h.replace(/^@/, '')}`;
-      case 'cashapp': return `https://cash.app/${h.startsWith('$') ? h : '$' + h}`;
-      case 'paypal':  return `https://paypal.me/${h.replace(/^@/, '')}`;
+      case 'venmo':  return `https://venmo.com/u/${h.replace(/^@/, '')}`;
+      case 'paypal': return `https://paypal.me/${h.replace(/^@/, '')}`;
       default:        return null;
     }
   }
@@ -1540,8 +1538,6 @@
       case 'venmo':
         // txn=charge opens a Venmo charge (request money) dialog pre-filled for the loser
         return `https://venmo.com/?txn=charge&audience=private&recipients=${enc(h.replace(/^@/,''))}&amount=${amt}&note=${enc(note)}`;
-      case 'cashapp':
-        return `https://cash.app/${h.startsWith('$') ? h : '$' + h}/${amt}`;
       case 'paypal':
         return `https://paypal.me/${h.replace(/^@/,'')}/${amt}`;
       default:
