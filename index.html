@@ -281,6 +281,10 @@
     .user-tag-dot   { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
     .user-tag-name  { font-size: 15px; font-weight: 700; }
     .user-tag-label { font-size: 11px; color: var(--muted); }
+    .user-tag-controls { display: flex; align-items: center; gap: 6px; }
+    .user-tag-parent-toggle { width: 28px; height: 28px; border-radius: 50%; border: none; background: var(--surface2); color: var(--muted); font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background .15s, color .15s; }
+    .user-tag-parent-toggle:active { background: var(--border); }
+    .user-tag-parent-toggle.active { background: rgba(124,77,255,.2); color: var(--purple); }
     .user-tag-del   { width: 28px; height: 28px; border-radius: 50%; border: none; background: rgba(255,68,68,.12); color: #ff6b6b; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .user-add-row   { display: flex; gap: 10px; }
     .user-add-input {
@@ -322,6 +326,9 @@
     /* ════════ MODAL ════════ */
     .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 200; align-items: flex-end; justify-content: center; }
     .overlay.open { display: flex; }
+    body.light-mode .overlay {
+      background: rgba(0,0,0,.5);
+    }
     .modal { background: var(--surface); border-radius: 28px 28px 0 0; padding: 0 18px calc(20px + env(safe-area-inset-bottom)); width: 100%; max-width: 480px; max-height: 88vh; overflow-y: auto; }
     .modal-sticky   { position: sticky; top: 0; background: var(--surface); padding-top: 20px; padding-bottom: 4px; z-index: 10; }
     .modal-handle   { width: 40px; height: 4px; background: var(--surface2); border-radius: 4px; margin: 0 auto 14px; }
@@ -357,6 +364,9 @@
       display: flex; align-items: flex-start; justify-content: center;
       padding: 24px 16px calc(32px + env(safe-area-inset-bottom));
       overflow-y: auto; -webkit-overflow-scrolling: touch;
+    }
+    body.light-mode .announce-overlay {
+      background: rgba(255,255,255,.96);
     }
     .announce-overlay.hidden { display: none; }
     .announce-card {
@@ -558,6 +568,9 @@
     .pin-overlay {
       display: none; position: fixed; inset: 0; background: rgba(0,0,0,.85);
       z-index: 999; align-items: center; justify-content: center; padding: 20px;
+    }
+    body.light-mode .pin-overlay {
+      background: rgba(0,0,0,.6);
     }
     .pin-overlay.open { display: flex; }
     .pin-card {
@@ -920,6 +933,11 @@
     const btn = document.getElementById('theme-toggle');
     const isLight = document.body.classList.contains('light-mode');
     btn.textContent = isLight ? '🌙' : '☀️';
+    // Update theme-color meta tag for browser UI
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeColorMeta) {
+      themeColorMeta.setAttribute('content', isLight ? '#ffffff' : '#0d0d1a');
+    }
   }
 
   const FB_CONFIG_KEY = 'swearjar2-firebase';
@@ -1844,10 +1862,21 @@
     document.getElementById('user-chip-dot').style.background = userColor(currentUser);
   }
 
+  function isCurrentUserParent() {
+    if (currentUser === 'admin') return true;
+    const user = appUsers.find(u => u.name === currentUser);
+    return user && user.isParent;
+  }
+
   // ══════════════════════════════════════════════════════
   //  ACTIONS
   // ══════════════════════════════════════════════════════
   function addSwear(kid) {
+    // Check if user is a parent
+    if (!isCurrentUserParent()) {
+      toast('Only parents and admins can log charges');
+      return;
+    }
     // Enforce daily charge limit ($10 max per user per day)
     const todayCharged = getTodayChargedBy(currentUser);
     if (todayCharged >= DAILY_LIMIT) {
@@ -1978,6 +2007,26 @@
   // ══════════════════════════════════════════════════════
   //  RENDER — TRACKER
   // ══════════════════════════════════════════════════════
+  function updateRoleBasedUI() {
+    // Hide settings tab for non-parents
+    const settingsTab = document.getElementById('tab-settings');
+    if (settingsTab) {
+      settingsTab.style.display = isCurrentUserParent() ? 'flex' : 'none';
+    }
+
+    // Update charge buttons for kids (show as disabled if not parent)
+    if (!isCurrentUserParent()) {
+      document.querySelectorAll('.swear-btn').forEach(btn => {
+        if (!btn.disabled) {
+          btn.disabled = true;
+          btn.style.opacity = '0.5';
+          btn.style.cursor = 'not-allowed';
+          btn.title = 'Only parents can log charges';
+        }
+      });
+    }
+  }
+
   function render() {
     const pot=totalPot(), winners=getWinners(), worst=getWorst();
     document.getElementById('month-chip').textContent = formatMonthKey(currentMonthKey());
@@ -2065,6 +2114,7 @@
           </div>`;
       }).join('');
     }
+    updateRoleBasedUI();
   }
 
   // ══════════════════════════════════════════════════════
@@ -2248,19 +2298,26 @@
   //  SETTINGS — APP USERS
   // ══════════════════════════════════════════════════════
   function renderAppUsers() {
+    const isAdmin = currentUser === 'admin';
     document.getElementById('users-list').innerHTML = appUsers.map((u,i)=>{
       const color=userColor(u.name), emoji=userEmoji(u.name,i);
       const isJar=KIDS.includes(u.name);
+      const isParent=u.isParent;
+      const roleLabel = isParent ? '👨‍👩‍👧‍👦 Parent · can resolve disputes' : isJar ? 'in the jar · can log swears' : 'can log swears';
+      const adminControls = isAdmin ? `<button class="user-tag-parent-toggle ${isParent?'active':''}" onclick="toggleParentRole(${i})" title="Mark as parent">${isParent?'👨‍👩‍👧':'👤'}</button>` : '';
       return `
         <div class="user-tag-row">
           <div class="user-tag-left">
             <div class="user-tag-dot" style="background:${color}"></div>
             <div>
               <div class="user-tag-name">${escHtml(u.name)}</div>
-              <div class="user-tag-label">${isJar?'in the jar · can log swears':'can log swears'}</div>
+              <div class="user-tag-label">${roleLabel}</div>
             </div>
           </div>
-          <button class="user-tag-del" onclick="removeAppUser(${i})">×</button>
+          <div class="user-tag-controls">
+            ${adminControls}
+            <button class="user-tag-del" onclick="removeAppUser(${i})">×</button>
+          </div>
         </div>`;
     }).join('') || `<div style="color:var(--muted);font-size:13px;padding:8px 0">No users yet — add some below</div>`;
   }
@@ -2285,6 +2342,18 @@
     toast(`Removed ${name}`);
   }
 
+  function toggleParentRole(idx) {
+    if (currentUser !== 'admin') {
+      toast('Only admin can change parent roles');
+      return;
+    }
+    appUsers[idx].isParent = !appUsers[idx].isParent;
+    saveAppUsers(appUsers);
+    renderAppUsers();
+    const name = appUsers[idx].name;
+    toast(appUsers[idx].isParent ? `${name} is now a parent 👨‍👩‍👧‍👦` : `${name} is no longer a parent`);
+  }
+
   // Keep app users in sync with jar members: if a jar member isn't in users, add them
   function syncUsersWithJar() {
     let changed=false;
@@ -2298,6 +2367,11 @@
   //  NAVIGATION
   // ══════════════════════════════════════════════════════
   function switchView(v) {
+    // Restrict settings view to parents and admin
+    if (v === 'settings' && !isCurrentUserParent()) {
+      toast('Only parents can access settings');
+      return;
+    }
     document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
     document.querySelectorAll('.nav-tab').forEach(el=>el.classList.remove('active'));
     document.getElementById(`view-${v}`).classList.add('active');
