@@ -256,6 +256,131 @@ const GetLeaderboardIntentHandler = {
   },
 };
 
+// ─── GET DAILY SUMMARY HANDLER ────────────────────────────────────────────
+
+const GetDailySummaryIntentHandler = {
+  canHandle(handlerInput) {
+    return (
+      Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
+      Alexa.getIntentName(handlerInput.requestEnvelope) === 'GetDailySummaryIntent'
+    );
+  },
+  async handle(handlerInput) {
+    let state;
+    try {
+      state = await readState();
+    } catch (err) {
+      console.error('Firebase read error:', err);
+      return handlerInput.responseBuilder
+        .speak('Sorry, I had trouble connecting to the swear jar.')
+        .getResponse();
+    }
+
+    const kids = state.kids || {};
+    const history = fbToArray(state.history);
+    const today = new Date().toISOString().split('T')[0];
+
+    // Count today's swears per kid
+    const todayCounts = {};
+    history.forEach(entry => {
+      if (entry.type === 'deletion' || !entry.ts) return;
+      if (entry.ts.startsWith(today)) {
+        todayCounts[entry.kid] = (todayCounts[entry.kid] || 0) + 1;
+      }
+    });
+
+    const totalToday = Object.values(todayCounts).reduce((s, c) => s + c, 0);
+    const potTotal = Object.values(kids).reduce((sum, k) => sum + (k.amount || 0), 0);
+
+    // Find who's winning (fewest swears)
+    const sorted = Object.entries(kids).sort((a, b) => (a[1].amount || 0) - (b[1].amount || 0));
+    const winner = sorted.length > 0 ? sorted[0][0] : 'no one';
+
+    let summary = '';
+    if (totalToday === 0) {
+      summary = 'Great news! No swears today so far. ';
+    } else {
+      const details = Object.entries(todayCounts)
+        .map(([name, count]) => name + ' had ' + count)
+        .join(', ');
+      summary = 'Today there ' + (totalToday === 1 ? 'was 1 swear' : 'were ' + totalToday + ' swears') + '. ' + details + '. ';
+    }
+
+    summary += 'The pot is at $' + potTotal + '. ';
+    summary += winner + ' is currently winning with the fewest swears.';
+
+    return handlerInput.responseBuilder
+      .speak(summary)
+      .getResponse();
+  },
+};
+
+// ─── GET STREAK HANDLER ──────────────────────────────────────────────────
+
+const GetStreakIntentHandler = {
+  canHandle(handlerInput) {
+    return (
+      Alexa.getRequestType(handlerInput.requestEnvelope) === 'IntentRequest' &&
+      Alexa.getIntentName(handlerInput.requestEnvelope) === 'GetStreakIntent'
+    );
+  },
+  async handle(handlerInput) {
+    const slots = handlerInput.requestEnvelope.request.intent.slots;
+    const rawName = (slots.KidName && slots.KidName.value) || '';
+    const normalized = rawName.trim().toLowerCase();
+
+    const KID_NAMES = await fetchKidNames();
+    const kidKey = KID_NAMES[normalized];
+
+    if (!kidKey) {
+      const validNames = Object.values(KID_NAMES).join(', ');
+      return handlerInput.responseBuilder
+        .speak('I didn\'t recognize "' + rawName + '". Valid names are ' + validNames + '.')
+        .reprompt('Whose streak do you want to check?')
+        .getResponse();
+    }
+
+    let state;
+    try {
+      state = await readState();
+    } catch (err) {
+      return handlerInput.responseBuilder
+        .speak('Sorry, I had trouble connecting to the swear jar.')
+        .getResponse();
+    }
+
+    const history = fbToArray(state.history);
+    const today = new Date().toISOString().split('T')[0];
+
+    // Calculate streak
+    const swearDays = new Set();
+    history.forEach(entry => {
+      if (entry.type === 'deletion' || entry.kid !== kidKey || !entry.ts) return;
+      swearDays.add(entry.ts.split('T')[0]);
+    });
+
+    let streak = 0;
+    if (!swearDays.has(today)) {
+      const d = new Date();
+      d.setDate(d.getDate() - 1);
+      for (let i = 0; i < 30; i++) {
+        const dStr = d.toISOString().split('T')[0];
+        if (swearDays.has(dStr)) break;
+        streak++;
+        d.setDate(d.getDate() - 1);
+      }
+    }
+
+    const response = streak === 0
+      ? kidKey + ' swore today, so their streak is at zero.'
+      : kidKey + ' has a ' + streak + '-day clean streak! ' + (streak >= 7 ? 'Impressive!' : 'Keep it up!');
+
+    return handlerInput.responseBuilder
+      .speak(response)
+      .getResponse();
+  },
+};
+
 // ─── LAUNCH HANDLER ────────────────────────────────────────────────────────
 
 const LaunchRequestHandler = {
@@ -266,8 +391,8 @@ const LaunchRequestHandler = {
     const KID_NAMES = await fetchKidNames();
     const names     = Object.values(KID_NAMES);
     return handlerInput.responseBuilder
-      .speak('Welcome to Slyder Swear Jar! Say "charge" followed by a name. Who should I charge?')
-      .reprompt('Who should I charge? You can say ' + names.join(', ') + '.')
+      .speak('Welcome to Slyder Swear Jar! You can charge someone, ask who\'s winning, get a daily summary, or check streaks. What would you like to do?')
+      .reprompt('You can say charge followed by a name, who\'s winning, daily summary, or check streak. Names are ' + names.join(', ') + '.')
       .getResponse();
   },
 };
@@ -285,8 +410,8 @@ const HelpIntentHandler = {
     const KID_NAMES = await fetchKidNames();
     const names     = Object.values(KID_NAMES).join(', ');
     return handlerInput.responseBuilder
-      .speak('Say "charge" followed by a name to add one dollar. Valid names are: ' + names + '.')
-      .reprompt('Who should I charge?')
+      .speak('You can say: "charge" followed by a name, "who\'s winning", "daily summary", or "check streak for" a name. Valid names are: ' + names + '.')
+      .reprompt('What would you like to do?')
       .getResponse();
   },
 };
@@ -341,6 +466,8 @@ exports.handler = Alexa.SkillBuilders.custom()
     ChargeKidIntentHandler,
     GetBalanceIntentHandler,
     GetLeaderboardIntentHandler,
+    GetDailySummaryIntentHandler,
+    GetStreakIntentHandler,
     HelpIntentHandler,
     CancelAndStopIntentHandler,
     SessionEndedRequestHandler,

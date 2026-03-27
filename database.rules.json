@@ -1,0 +1,60 @@
+{
+  "rules": {
+    "swearjar": {
+      // Only authenticated users can read/write
+      // For anonymous auth, this ensures at least Firebase Auth is initialized
+      ".read": "auth != null",
+      ".write": "auth != null",
+
+      "gameState": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        "kids": {
+          "$kidName": {
+            ".validate": "newData.hasChildren(['amount', 'swears'])",
+            "amount": { ".validate": "newData.isNumber() && newData.val() >= 0" },
+            "swears": { ".validate": "newData.isNumber() && newData.val() >= 0" }
+          }
+        },
+        "history": {
+          "$idx": {
+            ".validate": "newData.hasChild('ts')"
+          }
+        },
+        "currentMonth": { ".validate": "newData.isString()" }
+      },
+
+      "jarSettings": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        "$idx": {
+          ".validate": "newData.hasChildren(['name', 'color'])",
+          "name":  { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 20" },
+          "color": { ".validate": "newData.isString()" }
+        }
+      },
+
+      "appUsers": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      },
+
+      "adminPin": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        ".validate": "newData.isString() && newData.val().length == 64"
+      },
+
+      "notifUsers": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+
+    // Deny access to all other paths
+    "$other": {
+      ".read": false,
+      ".write": false
+    }
+  }
+}

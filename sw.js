@@ -1,5 +1,5 @@
-const CACHE = 'swearjar-v2';
-const ASSETS = ['./index.html', './manifest.json'];
+const CACHE = 'swearjar-v3';
+const ASSETS = ['./index.html', './manifest.json', './css/styles.css', './js/app.js'];
 
 // ── Install: pre-cache core assets and activate immediately ──
 self.addEventListener('install', e => {
