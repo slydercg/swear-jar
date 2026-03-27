@@ -116,6 +116,7 @@
     COLOR_HEX = Object.fromEntries(settings.map(s => [s.name, s.color]));
     EMOJI     = Object.fromEntries(settings.map((s,i) => [s.name, SLOT_EMOJI[i] ?? '🧒']));
     PAY_INFO  = Object.fromEntries(settings.map(s => [s.name, s.paymentInfo ?? '']));
+    AVATARS   = Object.fromEntries(settings.map(s => [s.name, s.avatar ?? '']));
   }
 
   function cleanupFbListeners() {
@@ -908,6 +909,7 @@
   let COLOR_HEX = Object.fromEntries(settings.map(s => [s.name, s.color]));
   let EMOJI     = Object.fromEntries(settings.map((s,i) => [s.name, SLOT_EMOJI[i]??'🧒']));
   let PAY_INFO  = Object.fromEntries(settings.map(s => [s.name, s.paymentInfo??'']));
+  let AVATARS   = Object.fromEntries(settings.map(s => [s.name, s.avatar??'']));
 
   // ── App users (who can log in) ──
   function loadAppUsers() {
@@ -1127,6 +1129,72 @@
     if (jarIdx >= 0) return SLOT_EMOJI[jarIdx] ?? '🧒';
     return EXTRA_EMOJI[idx % EXTRA_EMOJI.length];
   }
+  // Avatar for a user — returns photo URL or empty string
+  function userAvatar(name) { return AVATARS[name] ?? ''; }
+
+  // Render an avatar element: photo if available, emoji fallback
+  function renderAvatar(name, size, emoji, color) {
+    const avatar = userAvatar(name);
+    if (avatar) {
+      return `<div class="avatar-photo" style="width:${size}px;height:${size}px;border-color:${color||userColor(name)}"><img src="${avatar}" alt="${escHtml(name)}" /></div>`;
+    }
+    return `<div class="kid-avatar" style="width:${size}px;height:${size}px;--c:${color||userColor(name)}"><span class="kid-avatar-emoji" style="font-size:${Math.round(size*0.48)}px">${emoji||'🧒'}</span></div>`;
+  }
+
+  // Handle avatar file upload — resize to 200x200 and convert to base64
+  function handleAvatarUpload(idx, fileInput) {
+    const file = fileInput.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { toast('⚠️ Please select an image file'); return; }
+    if (file.size > 5 * 1024 * 1024) { toast('⚠️ Image must be under 5MB'); return; }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const img = new Image();
+      img.onload = function() {
+        // Resize to 200x200 square (center crop)
+        const canvas = document.createElement('canvas');
+        const size = 200;
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+
+        // Center crop: use the smaller dimension
+        const srcSize = Math.min(img.width, img.height);
+        const sx = (img.width - srcSize) / 2;
+        const sy = (img.height - srcSize) / 2;
+        ctx.drawImage(img, sx, sy, srcSize, srcSize, 0, 0, size, size);
+
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        settings[idx].avatar = dataUrl;
+
+        // Update the preview immediately
+        const preview = document.getElementById(`avatar-preview-${idx}`);
+        if (preview) {
+          preview.innerHTML = `<img src="${dataUrl}" alt="avatar" />`;
+          preview.className = 'settings-avatar-preview has-photo';
+        }
+        const removeBtn = document.getElementById(`avatar-remove-${idx}`);
+        if (removeBtn) removeBtn.style.display = '';
+
+        toast(`📸 Photo set for ${settings[idx].name}`);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removeAvatar(idx) {
+    settings[idx].avatar = '';
+    const preview = document.getElementById(`avatar-preview-${idx}`);
+    if (preview) {
+      preview.innerHTML = `<span>${SLOT_EMOJI[idx]??'🧒'}</span>`;
+      preview.className = 'settings-avatar-preview';
+    }
+    const removeBtn = document.getElementById(`avatar-remove-${idx}`);
+    if (removeBtn) removeBtn.style.display = 'none';
+    toast('Photo removed');
+  }
 
   // ══════════════════════════════════════════════════════
   //  LOGIN
@@ -1136,13 +1204,16 @@
     grid.innerHTML = appUsers.map((u, i) => {
       const color = userColor(u.name);
       const emoji = userEmoji(u.name, i);
+      const avatar = userAvatar(u.name);
       const isJar = KIDS.includes(u.name);
       return `
         <button class="login-btn" style="border-color:${color}22"
           onclick="loginAs('${escHtml(u.name)}')"
           onmouseover="this.style.borderColor='${color}'"
           onmouseout="this.style.borderColor='${color}22'">
-          <div class="login-btn-emoji">${emoji}</div>
+          ${avatar
+            ? `<div class="login-btn-avatar"><img src="${avatar}" alt="${escHtml(u.name)}" /></div>`
+            : `<div class="login-btn-emoji">${emoji}</div>`}
           <div class="login-btn-info">
             <div class="login-btn-name">${escHtml(u.name)}</div>
             ${isJar ? `<div class="login-btn-sub" style="color:${color}">in the jar</div>` : '<div class="login-btn-sub">logging swears</div>'}
@@ -1223,7 +1294,17 @@
   function updateUserChip() {
     if (!currentUser) return;
     document.getElementById('user-chip-name').textContent = currentUser;
-    document.getElementById('user-chip-dot').style.background = userColor(currentUser);
+    const dotEl = document.getElementById('user-chip-dot');
+    const avatar = userAvatar(currentUser);
+    if (avatar) {
+      dotEl.style.background = `url(${avatar}) center/cover`;
+      dotEl.style.width = '22px';
+      dotEl.style.height = '22px';
+    } else {
+      dotEl.style.background = userColor(currentUser);
+      dotEl.style.width = '8px';
+      dotEl.style.height = '8px';
+    }
   }
 
   function isCurrentUserParent() {
@@ -1430,7 +1511,7 @@
         <div class="${cls}" data-kid="${kid}" style="--c:${COLORS[kid]??'#888'}">
           <div class="kid-badmouth">🤬</div>
           <div class="kid-crown">👑</div>
-          <div class="kid-avatar"><span class="kid-avatar-emoji">${EMOJI[kid]??'🧒'}</span></div>
+          ${renderAvatar(kid, 56, EMOJI[kid]??'🧒', COLORS[kid]??'#888')}
           <div class="kid-name">${escHtml(kid)}</div>
           <div class="kid-amount">$${amount}</div>
           <div class="kid-count">${swears} swear${swears!==1?'s':''}</div>
@@ -1473,7 +1554,7 @@
         return `
           <div class="activity-row${isDisputed ? ' disputed' : ''}" style="--c:${COLORS[kid]??'#888'}">
             <div class="activity-left">
-              <div class="activity-dot"></div>
+              ${AVATARS[kid] ? `<div class="activity-avatar"><img src="${AVATARS[kid]}" alt="${escHtml(kid)}" /></div>` : `<div class="activity-dot"></div>`}
               <div class="activity-info">
                 <div class="activity-name">${escHtml(kid)}</div>
                 ${addedBy ? `<div class="activity-by">recorded by ${escHtml(addedBy)}${isDisputed ? ' · <span style="color:#ffa726">🚩 disputed</span>' : ''}</div>` : ''}
@@ -1631,7 +1712,14 @@
     document.getElementById('settings-list').innerHTML = settings.map((s,i)=>`
       <div class="settings-card" style="margin-bottom:10px" data-idx="${i}">
         <div class="settings-row-top">
-          <div class="settings-slot-emoji">${SLOT_EMOJI[i]??'🧒'}</div>
+          <div class="settings-avatar-wrap">
+            <div class="settings-avatar-preview ${s.avatar ? 'has-photo' : ''}" id="avatar-preview-${i}" onclick="document.getElementById('avatar-input-${i}').click()">
+              ${s.avatar ? `<img src="${s.avatar}" alt="avatar" />` : `<span>${SLOT_EMOJI[i]??'🧒'}</span>`}
+            </div>
+            <div class="settings-avatar-upload-hint">📷</div>
+            <input type="file" id="avatar-input-${i}" accept="image/*" style="display:none" onchange="handleAvatarUpload(${i}, this)" />
+            <button class="settings-avatar-remove" id="avatar-remove-${i}" onclick="removeAvatar(${i})" style="${s.avatar ? '' : 'display:none'}" title="Remove photo">×</button>
+          </div>
           <input class="settings-name-input" type="text" value="${escHtml(s.name)}"
             placeholder="Name" maxlength="20" data-field="name" data-idx="${i}" />
           <div class="settings-color-wrap">
@@ -1706,6 +1794,7 @@
     COLOR_HEX=Object.fromEntries(settings.map(s=>[s.name,s.color]));
     EMOJI    =Object.fromEntries(settings.map((s,i)=>[s.name,SLOT_EMOJI[i]??'🧒']));
     PAY_INFO =Object.fromEntries(settings.map(s=>[s.name,s.paymentInfo??'']));
+    AVATARS  =Object.fromEntries(settings.map(s=>[s.name,s.avatar??'']));
     const ns={kids:{},history:state.history,monthlyResults:state.monthlyResults,currentMonth:state.currentMonth};
     KIDS.forEach((name,i)=>{const on=oldKids[i];ns.kids[name]=(on&&state.kids[on])?state.kids[on]:(state.kids[name]??{amount:0,swears:0});});
     state=ns;
