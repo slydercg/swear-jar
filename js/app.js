@@ -407,6 +407,55 @@
     toast('🚩 Flagged as disputed — a parent will review it');
   }
 
+  function resolveDispute(idx) {
+    if (!isCurrentUserParent()) { toast('⛔ Only parents and admins can resolve disputes'); return; }
+    const entry = state.history[idx];
+    if (!entry || !entry.disputed) { toast('⚠️ Not a disputed entry'); return; }
+    if (!confirm(`Resolve dispute: remove $${entry.amount || 1} charge for ${entry.kid}?`)) return;
+
+    const { kid, addedBy, ts } = entry;
+    const entryAmt = entry.amount || 1;
+
+    // Reverse the fee
+    if (state.kids[kid]) {
+      state.kids[kid].amount = Math.max(0, state.kids[kid].amount - entryAmt);
+      state.kids[kid].swears = Math.max(0, state.kids[kid].swears - 1);
+    }
+
+    // Remove the original entry
+    state.history.splice(idx, 1);
+
+    // Insert audit record
+    state.history.unshift({
+      type: 'deletion',
+      kid,
+      deletedBy: currentUser,
+      originalAddedBy: addedBy,
+      originalTs: ts,
+      originalAmount: entryAmt,
+      reason: 'dispute resolved',
+      ts: new Date().toISOString()
+    });
+
+    if (state.history.length > 500) state.history.length = 500;
+    save(); render();
+    toast(`✅ Dispute resolved — ${kid}'s charge removed`);
+  }
+
+  function dismissDispute(idx) {
+    if (!isCurrentUserParent()) { toast('⛔ Only parents and admins can dismiss disputes'); return; }
+    const entry = state.history[idx];
+    if (!entry || !entry.disputed) { toast('⚠️ Not a disputed entry'); return; }
+
+    delete entry.disputed;
+    delete entry.disputedAt;
+    delete entry.disputedBy;
+    entry.disputeDismissedBy = currentUser;
+    entry.disputeDismissedAt = new Date().toISOString();
+    save(); render();
+    toast(`❌ Dispute dismissed — charge stands`);
+  }
+
   // ══════════════════════════════════════════════════════
   //  ADMIN PIN  (SHA-256, stored in Firebase)
   // ══════════════════════════════════════════════════════
@@ -1187,11 +1236,6 @@
   //  ACTIONS
   // ══════════════════════════════════════════════════════
   function addSwear(kid, categoryId) {
-    // Check if user is a parent
-    if (!isCurrentUserParent()) {
-      toast('Only parents and admins can log charges');
-      return;
-    }
     const category = CHARGE_CATEGORIES.find(c => c.id === categoryId) || CHARGE_CATEGORIES[1]; // default: moderate
     const chargeAmount = category.amount;
     // Enforce daily charge limit ($10 max per user per day)
@@ -1343,18 +1387,6 @@
     if (settingsTab) {
       settingsTab.style.display = isCurrentUserParent() ? 'flex' : 'none';
     }
-
-    // Update charge buttons for kids (show as disabled if not parent)
-    if (!isCurrentUserParent()) {
-      document.querySelectorAll('.swear-btn').forEach(btn => {
-        if (!btn.disabled) {
-          btn.disabled = true;
-          btn.style.opacity = '0.5';
-          btn.style.cursor = 'not-allowed';
-          btn.title = 'Only parents can log charges';
-        }
-      });
-    }
   }
 
   function render() {
@@ -1453,6 +1485,7 @@
                 ? `<div class="activity-badge disputed-badge">🚩 Disputed</div>`
                 : `<div class="activity-badge">${entry.category ? (CHARGE_CATEGORIES.find(c=>c.id===entry.category)?.emoji??'') + ' ' : ''}+$${entry.amount || 1}</div>`}
               ${canDispute ? `<button class="activity-dispute-btn" onclick="disputeActivity(${idx})" title="Flag charge as disputed">🚩</button>` : ''}
+              ${isDisputed && isCurrentUserParent() ? `<button class="activity-resolve-btn" onclick="resolveDispute(${idx})" title="Resolve dispute (remove charge)">✅</button><button class="activity-dismiss-btn" onclick="dismissDispute(${idx})" title="Dismiss dispute (keep charge)">❌</button>` : ''}
               ${canDel ? `<button class="activity-del-btn" onclick="deleteActivity(${idx})" title="Delete this entry">🗑️</button>` : ''}
             </div>
           </div>`;
