@@ -95,6 +95,46 @@
           ]
         },
         {
+          "name": "GetDailySummaryIntent",
+          "description": "Gets a daily summary of swear jar activity",
+          "slots": [],
+          "samples": [
+            "give me the daily summary",
+            "daily summary",
+            "daily update",
+            "what happened today",
+            "how was today",
+            "today's report",
+            "give me an update",
+            "swear jar update",
+            "what's the update",
+            "how are we doing today"
+          ]
+        },
+        {
+          "name": "GetStreakIntent",
+          "description": "Checks how long someone has been clean",
+          "slots": [
+            {
+              "name": "KidName",
+              "type": "KidNameType",
+              "samples": [
+                "{KidName}",
+                "{KidName} streak",
+                "streak for {KidName}"
+              ]
+            }
+          ],
+          "samples": [
+            "how long has {KidName} been clean",
+            "what's {KidName} streak",
+            "check {KidName} streak",
+            "{KidName} clean streak",
+            "how is {KidName} doing",
+            "is {KidName} being good"
+          ]
+        },
+        {
           "name": "AMAZON.FallbackIntent",
           "samples": []
         },
