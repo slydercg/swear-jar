@@ -167,7 +167,12 @@
     }
     .kid-name   { font-size: 16px; font-weight: 700; }
     .kid-amount { font-size: 32px; font-weight: 900; color: var(--c); line-height: 1; }
+    .kid-amount.overdrawn-amount { color: #ff4444; }
     .kid-count  { font-size: 11px; color: var(--muted); }
+    .kid-balance-bar { width: 100%; height: 4px; background: var(--surface2); border-radius: 4px; overflow: hidden; margin: 2px 0; }
+    .kid-balance-fill { height: 100%; border-radius: 4px; transition: width .4s ease; }
+    .kid-card.overdrawn { border-color: #ff4444; }
+    .kid-card.overdrawn::before { background: #ff4444; }
     .swear-btn  {
       margin-top: 4px; width: 100%; padding: 12px 8px;
       background: var(--c); border: none; border-radius: 14px;
@@ -651,6 +656,43 @@
       transition: background .15s, border-color .15s; -webkit-appearance: none;
     }
     .btn-export-csv:active { background: var(--surface2); border-color: var(--purple); }
+
+    /* ════════ BUDGET MANAGEMENT ════════ */
+    .budget-card {
+      background: var(--surface); border-radius: 16px; padding: 14px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    .budget-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+    }
+    .budget-row:last-of-type { border-bottom: none; }
+    .budget-row-label { display: flex; flex-direction: column; gap: 2px; min-width: 100px; }
+    .budget-month-name { font-size: 13px; font-weight: 700; }
+    .budget-current-badge {
+      font-size: 10px; font-weight: 700; color: var(--purple);
+      background: rgba(124,77,255,.12); border-radius: 8px; padding: 1px 6px;
+      display: inline-block; width: fit-content;
+    }
+    .budget-row-input-wrap {
+      display: flex; align-items: center; gap: 2px; flex-shrink: 0;
+    }
+    .budget-dollar { font-size: 14px; font-weight: 700; color: var(--muted); }
+    .budget-input {
+      width: 80px; background: var(--surface2); border: 1.5px solid var(--border);
+      border-radius: 10px; padding: 8px 10px; color: var(--text);
+      font-size: 15px; font-weight: 700; text-align: right;
+      outline: none; -webkit-appearance: none;
+    }
+    .budget-input:focus { border-color: var(--purple); }
+    .budget-input:disabled { opacity: .5; cursor: not-allowed; }
+    .budget-per-person { font-size: 11px; color: var(--muted); white-space: nowrap; flex: 1; }
+    .budget-remove-btn {
+      width: 24px; height: 24px; border-radius: 50%; border: none;
+      background: rgba(255,68,68,.12); color: #ff6b6b; font-size: 14px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; -webkit-appearance: none;
+    }
 
     /* ════════ ADMIN PIN MODAL ════════ */
     .pin-overlay {

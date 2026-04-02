@@ -1,6 +1,9 @@
 /**
  * Swear Jar - Core Logic (testable, no DOM dependencies)
- * Extracted for unit testing.
+ *
+ * NEW MODEL: Fixed monthly pot divided equally among participants.
+ * Each swear DEDUCTS from a person's share. If they go below $0,
+ * the overflow carries as a penalty to next month.
  */
 
 const CHARGE_CATEGORIES = [
@@ -10,7 +13,7 @@ const CHARGE_CATEGORIES = [
 ];
 
 const CHARGE_AMOUNT = 1;
-const DAILY_LIMIT = 10;
+const DEFAULT_MONTHLY_POT = 100;
 
 const STREAK_MILESTONES = [
   { days: 3,  badge: '🌱', label: 'Sprout' },
@@ -22,40 +25,93 @@ const STREAK_MILESTONES = [
 
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 
+// ── Budget / Pot helpers ──────────────────────────────────────
+
 /**
- * Calculate total pot from kids state
+ * Get the budget for a given month key from the budgets config.
+ * Falls back to DEFAULT_MONTHLY_POT if no budget is set.
+ * @param {Object} budgets - { 'YYYY-MM': number, ... }
+ * @param {string} monthKey - 'YYYY-MM'
+ * @returns {number}
  */
-function totalPot(kids) {
-  return Object.values(kids).reduce((s, k) => s + (k.amount || 0), 0);
+function getMonthlyBudget(budgets, monthKey) {
+  if (budgets && budgets[monthKey] !== undefined) return budgets[monthKey];
+  // Check for a default key
+  if (budgets && budgets['default'] !== undefined) return budgets['default'];
+  return DEFAULT_MONTHLY_POT;
 }
 
 /**
- * Determine winner(s) - kid(s) with the fewest swears
+ * Calculate each person's allocation from the monthly pot.
+ * @param {number} pot - Total monthly pot
+ * @param {number} numKids - Number of participants
+ * @returns {number} - Per-person allocation (rounded to 2 decimals)
  */
-function getWinners(kids, kidNames) {
-  const amounts = kidNames.map(k => kids[k]?.amount ?? 0);
-  const min = Math.min(...amounts);
-  return kidNames.filter(k => (kids[k]?.amount ?? 0) === min);
+function getAllocation(pot, numKids) {
+  if (numKids <= 0) return 0;
+  return Math.round((pot / numKids) * 100) / 100;
 }
 
 /**
- * Determine worst offender(s)
+ * Calculate remaining balance for a kid.
+ * allocation - totalDeducted. Can go negative (overflow/penalty).
  */
-function getWorst(kids, kidNames) {
-  const pot = totalPot(kids);
-  if (pot === 0) return [];
-  const max = Math.max(...kidNames.map(k => kids[k]?.amount ?? 0));
-  if (max === 0) return [];
-  return kidNames.filter(k => (kids[k]?.amount ?? 0) === max);
+function getRemaining(allocation, totalDeducted) {
+  return Math.round((allocation - totalDeducted) * 100) / 100;
 }
 
 /**
- * Calculate streak for a kid given history
- * @param {string} kid - Kid name
- * @param {Array} history - History entries
- * @param {string} todayStr - Today's date string (YYYY-MM-DD)
- * @returns {number} - Consecutive clean days
+ * Calculate overflow (penalty carried to next month).
+ * If remaining < 0, the absolute value is the overflow.
  */
+function getOverflow(remaining) {
+  return remaining < 0 ? Math.abs(remaining) : 0;
+}
+
+/**
+ * Total amount deducted from all kids (total fines this month)
+ */
+function totalDeducted(kids) {
+  return Object.values(kids).reduce((s, k) => s + (k.deducted || 0), 0);
+}
+
+/**
+ * Total pot remaining across all kids
+ */
+function totalPotRemaining(kids, allocation) {
+  return Object.values(kids).reduce((s, k) => {
+    const rem = getRemaining(allocation, k.deducted || 0);
+    return s + Math.max(0, rem);
+  }, 0);
+}
+
+// ── Winner / Loser logic ──────────────────────────────────────
+
+/**
+ * Determine winner(s) - kid(s) with the MOST money remaining
+ * (fewest deductions). In the new model, higher remaining = winner.
+ */
+function getWinners(kids, kidNames, allocation) {
+  if (!kidNames.length) return [];
+  const remainings = kidNames.map(k => getRemaining(allocation, kids[k]?.deducted ?? 0));
+  const max = Math.max(...remainings);
+  return kidNames.filter(k => getRemaining(allocation, kids[k]?.deducted ?? 0) === max);
+}
+
+/**
+ * Determine worst offender(s) - kid(s) with LEAST remaining
+ */
+function getWorst(kids, kidNames, allocation) {
+  if (!kidNames.length) return [];
+  const totDed = Object.values(kids).reduce((s, k) => s + (k.deducted || 0), 0);
+  if (totDed === 0) return [];
+  const remainings = kidNames.map(k => getRemaining(allocation, kids[k]?.deducted ?? 0));
+  const min = Math.min(...remainings);
+  return kidNames.filter(k => getRemaining(allocation, kids[k]?.deducted ?? 0) === min);
+}
+
+// ── Streak helpers (unchanged) ────────────────────────────────
+
 function getStreak(kid, history, todayStr) {
   const swearDays = new Set();
   (history || []).forEach(entry => {
@@ -79,9 +135,6 @@ function getStreak(kid, history, todayStr) {
   return streak;
 }
 
-/**
- * Get the appropriate streak badge for a given streak length
- */
 function getStreakBadge(streak) {
   if (streak < 3) return null;
   let best = STREAK_MILESTONES[0];
@@ -91,16 +144,10 @@ function getStreakBadge(streak) {
   return best;
 }
 
-/**
- * Get the charge category by ID
- */
 function getChargeCategory(categoryId) {
   return CHARGE_CATEGORIES.find(c => c.id === categoryId) || CHARGE_CATEGORIES[1];
 }
 
-/**
- * Calculate how much a user has charged today
- */
 function getTodayChargedBy(user, history, todayStr) {
   if (!user) return 0;
   let total = 0;
@@ -113,9 +160,6 @@ function getTodayChargedBy(user, history, todayStr) {
   return total;
 }
 
-/**
- * Check if a user can delete an entry
- */
 function canDeleteEntry(entry, currentUser) {
   if (!currentUser) return false;
   if (entry.type === 'deletion') return false;
@@ -124,18 +168,12 @@ function canDeleteEntry(entry, currentUser) {
   return true;
 }
 
-/**
- * Format a month key (YYYY-MM) to human readable
- */
 function formatMonthKey(k) {
   if (!k) return '—';
   const [y, m] = k.split('-');
   return `${MONTHS[parseInt(m) - 1]} ${y}`;
 }
 
-/**
- * Get cleanest mouth - kid(s) with longest streak
- */
 function getCleanestMouth(kidNames, history, todayStr) {
   let maxStreak = 0;
   let cleanest = [];
@@ -148,34 +186,69 @@ function getCleanestMouth(kidNames, history, todayStr) {
 }
 
 /**
- * Generate CSV content from state data
+ * Generate CSV content from state data (updated for pot model)
  */
 function generateCsvContent(state, kidNames, chargeCategories) {
-  const rows = [['Date', 'Time', 'Person', 'Amount', 'Category', 'Recorded By', 'Type']];
+  const rows = [['Date', 'Time', 'Person', 'Deducted', 'Category', 'Recorded By', 'Type']];
 
   (state.history || []).forEach(entry => {
     const d = entry.ts ? new Date(entry.ts) : new Date();
     const dateStr = d.toLocaleDateString('en-US');
     const timeStr = d.toLocaleTimeString('en-US');
     if (entry.type === 'deletion') {
-      rows.push([dateStr, timeStr, entry.kid, `-$${entry.originalAmount || 1}`, '', entry.deletedBy || '', 'Deletion']);
+      rows.push([dateStr, timeStr, entry.kid, `+$${entry.originalAmount || 1}`, '', entry.deletedBy || '', 'Reversed']);
     } else {
       const catLabel = entry.category ? (chargeCategories.find(c => c.id === entry.category)?.label ?? '') : '';
-      rows.push([dateStr, timeStr, entry.kid, `$${entry.amount || 1}`, catLabel, entry.addedBy || '', 'Charge']);
+      rows.push([dateStr, timeStr, entry.kid, `-$${entry.amount || 1}`, catLabel, entry.addedBy || '', 'Deduction']);
     }
   });
 
   (state.monthlyResults || []).forEach(result => {
     const monthLabel = formatMonthKey(result.month);
     Object.entries(result.kids || {}).forEach(([kid, data]) => {
-      rows.push([monthLabel, '', kid, `$${data.amount || 0}`, '', '', `Monthly Total (${data.swears || 0} swears)`]);
+      rows.push([monthLabel, '', kid, `$${data.remaining ?? 0} remaining`, '', '', `Monthly (${data.swears || 0} swears)`]);
     });
     if (result.winners) {
-      rows.push([monthLabel, '', result.winners.join(' & '), `$${result.pot || 0}`, '', '', 'Winner']);
+      rows.push([monthLabel, '', result.winners.join(' & '), `$${result.winnerPrize || 0}`, '', '', 'Winner']);
     }
   });
 
   return rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+}
+
+/**
+ * Calculate month-end results for the pot model.
+ * Winner gets their remaining balance. Losers forfeit theirs.
+ * Overflow penalties carry to next month.
+ */
+function calculateMonthEnd(kids, kidNames, allocation) {
+  const results = {};
+  const overflows = {};
+
+  kidNames.forEach(kid => {
+    const deducted = kids[kid]?.deducted ?? 0;
+    const swears = kids[kid]?.swears ?? 0;
+    const remaining = getRemaining(allocation, deducted);
+    const overflow = getOverflow(remaining);
+    results[kid] = { deducted, swears, remaining: Math.max(0, remaining), overflow };
+    if (overflow > 0) overflows[kid] = overflow;
+  });
+
+  return { results, overflows };
+}
+
+/**
+ * Generate future month keys from a starting month, up to N months.
+ */
+function getFutureMonthKeys(startMonthKey, count) {
+  const keys = [];
+  const [y, m] = startMonthKey.split('-').map(Number);
+  for (let i = 0; i < count; i++) {
+    const month = ((m - 1 + i) % 12) + 1;
+    const year = y + Math.floor((m - 1 + i) / 12);
+    keys.push(`${year}-${String(month).padStart(2, '0')}`);
+  }
+  return keys;
 }
 
 // CommonJS export for testing
@@ -183,10 +256,15 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     CHARGE_CATEGORIES,
     CHARGE_AMOUNT,
-    DAILY_LIMIT,
+    DEFAULT_MONTHLY_POT,
     STREAK_MILESTONES,
     MONTHS,
-    totalPot,
+    getMonthlyBudget,
+    getAllocation,
+    getRemaining,
+    getOverflow,
+    totalDeducted,
+    totalPotRemaining,
     getWinners,
     getWorst,
     getStreak,
@@ -197,5 +275,7 @@ if (typeof module !== 'undefined' && module.exports) {
     formatMonthKey,
     getCleanestMouth,
     generateCsvContent,
+    calculateMonthEnd,
+    getFutureMonthKeys,
   };
 }

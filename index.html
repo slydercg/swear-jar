@@ -66,7 +66,7 @@
       </div>
       <div class="pot-card">
         <div class="pot-left">
-          <div class="pot-label">💰 Month's Pot</div>
+          <div class="pot-label" id="pot-label">💰 Month's Pot</div>
           <div class="pot-amount" id="pot-amount">$0</div>
         </div>
         <div class="pot-right">
@@ -213,6 +213,16 @@
           <button class="btn-alexa-console" onclick="window.open('https://developer.amazon.com/alexa/console/ask','_blank')">
             🔗 Open Alexa Developer Console ↗
           </button>
+        </div>
+      </div>
+
+      <!-- Monthly Budget — admin only -->
+      <div id="budget-section" style="display:none">
+        <div class="settings-section-label" style="margin-top:8px">Monthly Budget</div>
+        <div class="settings-section-hint">Set the total pot for each month. Each participant gets an equal share. If someone goes over, the excess carries as a penalty to next month.</div>
+        <div class="budget-card" id="budget-card">
+          <div id="budget-list"></div>
+          <button class="settings-add-btn" onclick="addBudgetMonth()" style="margin-top:8px">+ Add Future Month</button>
         </div>
       </div>
 
