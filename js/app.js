@@ -11,8 +11,8 @@
   ];
   // Default charge amount (backward compat)
   const CHARGE_AMOUNT = 1;
-  // Maximum a single user can charge others in one calendar day (EST)
-  const DAILY_LIMIT = 10;
+  // Default monthly pot amount
+  const DEFAULT_MONTHLY_POT = 100;
 
   // ══════════════════════════════════════════════════════
   //  THEME TOGGLE
@@ -342,7 +342,7 @@
 
     // Reverse the fee
     if (state.kids[kid]) {
-      state.kids[kid].amount = Math.max(0, state.kids[kid].amount - entryAmt);
+      state.kids[kid].deducted = Math.max(0, (state.kids[kid].deducted || 0) - entryAmt);
       state.kids[kid].swears = Math.max(0, state.kids[kid].swears - 1);
     }
 
@@ -419,7 +419,7 @@
 
     // Reverse the fee
     if (state.kids[kid]) {
-      state.kids[kid].amount = Math.max(0, state.kids[kid].amount - entryAmt);
+      state.kids[kid].deducted = Math.max(0, (state.kids[kid].deducted || 0) - entryAmt);
       state.kids[kid].swears = Math.max(0, state.kids[kid].swears - 1);
     }
 
@@ -926,14 +926,23 @@
   // ── Game state ──
   function defaultState() {
     const kids = {};
-    KIDS.forEach(k => { kids[k] = { amount:0, swears:0 }; });
-    return { kids, history:[], monthlyResults:[], currentMonth:'' };
+    KIDS.forEach(k => { kids[k] = { deducted:0, swears:0, penalty:0 }; });
+    return { kids, history:[], monthlyResults:[], currentMonth:'', budgets:{} };
   }
   function load() {
     try {
       const s = localStorage.getItem('swearjar2');
       if (s) {
         const data = JSON.parse(s);
+        if (!data.budgets) data.budgets = {};
+        // Migrate old amount-based data to new deducted model
+        Object.values(data.kids || {}).forEach(k => {
+          if (k.amount !== undefined && k.deducted === undefined) {
+            k.deducted = k.amount; k.penalty = 0; delete k.amount;
+          }
+          if (k.deducted === undefined) k.deducted = 0;
+          if (k.penalty === undefined) k.penalty = 0;
+        });
         (data.monthlyResults||[]).forEach(r => { if (!r.winners&&r.winner){r.winners=[r.winner];delete r.winner;} });
         return data;
       }
@@ -983,35 +992,52 @@
   }
 
   function autoCloseMonth(newMonth) {
-    const pot = totalPot(), winners = getWinners(), month = state.currentMonth;
-    // Build the result snapshot before resetting
-    const result = { month, winners, pot, kids: JSON.parse(JSON.stringify(state.kids)) };
-    
-    // Add payment tracking for losers
-    result.payments = {};
+    const month = state.currentMonth;
+    const budget = getMonthBudget(month);
+    const alloc = KIDS.length > 0 ? Math.round((budget / KIDS.length) * 100) / 100 : 0;
+    const winners = getWinners();
+    const winnerPrize = winners.length > 0
+      ? Math.round(winners.reduce((s,k) => s + Math.max(0, getKidRemaining(k)), 0) * 100) / 100
+      : 0;
+
+    // Build result snapshot with remaining balances
+    const kidsSnapshot = {};
+    const overflows = {};
     KIDS.forEach(kid => {
-      if (!winners.includes(kid) && (state.kids[kid]?.amount ?? 0) > 0) {
-        result.payments[kid] = {
-          amount: state.kids[kid].amount,
-          paid: false,
-          paidAt: null,
-          paidBy: null
-        };
-      }
+      const rem = getKidRemaining(kid);
+      kidsSnapshot[kid] = {
+        deducted: state.kids[kid]?.deducted ?? 0,
+        swears: state.kids[kid]?.swears ?? 0,
+        remaining: Math.max(0, rem),
+        allocation: alloc,
+      };
+      // Track overflow penalties
+      if (rem < 0) overflows[kid] = Math.abs(rem);
     });
-    
+
+    const result = { month, winners, budget, allocation: alloc, winnerPrize, kids: kidsSnapshot };
+
     state.monthlyResults.unshift(result);
-    // Reset active month data
-    KIDS.forEach(k => { state.kids[k] = { amount:0, swears:0 }; });
+
+    // Reset for new month, applying overflow penalties
+    KIDS.forEach(k => {
+      state.kids[k] = {
+        deducted: 0,
+        swears: 0,
+        penalty: overflows[k] || 0, // carry over overflow from last month
+      };
+    });
     state.history = [];
     state.currentMonth = newMonth;
     save(); render();
-    if (pot > 0) showWinnerAnnouncement(result);
+    if (budget > 0) showWinnerAnnouncement(result);
   }
 
   function showWinnerAnnouncement(result) {
-    const { winners, pot, kids, month } = result;
-    const sorted = [...KIDS].sort((a,b) => (kids[a]?.amount??0) - (kids[b]?.amount??0));
+    const { winners, kids, month, budget, allocation, winnerPrize } = result;
+    // Sort by remaining (highest first)
+    const allKids = Object.keys(kids);
+    const sorted = [...allKids].sort((a,b) => (kids[b]?.remaining??0) - (kids[a]?.remaining??0));
     const overlay = document.getElementById('announce-overlay');
     overlay.dataset.month = month;
 
@@ -1021,8 +1047,8 @@
     wnEl.textContent = winners.join(' & ');
     wnEl.style.color = COLOR_HEX[winners[0]] ?? 'var(--text)';
     const prizeText = winners.length > 1
-      ? `Each wins $${(pot / winners.length).toFixed(2)}`
-      : `Wins $${pot}!`;
+      ? `Each kept $${(winnerPrize / winners.length).toFixed(2)}`
+      : `Kept $${(winnerPrize ?? 0).toFixed(2)}!`;
     document.getElementById('announce-prize').textContent = prizeText;
 
     // Leaderboard
@@ -1035,61 +1061,11 @@
               <span>${medals[i]??'•'}</span>
               <span style="font-weight:700;color:${COLOR_HEX[kid]}">${escHtml(kid)}</span>
             </div>
-            <span style="color:var(--muted);font-size:14px">${kids[kid]?.swears??0} swear${(kids[kid]?.swears??0)!==1?'s':''} = $${kids[kid]?.amount??0}</span>
+            <span style="color:var(--muted);font-size:14px">${kids[kid]?.swears??0} swear${(kids[kid]?.swears??0)!==1?'s':''} · $${(kids[kid]?.remaining??0).toFixed(2)} left</span>
           </div>`).join('')}
       </div>`;
 
-    // Payment request buttons for each loser
-    const note = `Swear Jar – ${formatMonthKey(month)}`;
-    const loserReqs = KIDS.filter(k => !winners.includes(k) && (kids[k]?.amount??0) > 0)
-      .map(k => {
-        const s = settings.find(x => x.name === k);
-        const isPaid = result.payments && result.payments[k] && result.payments[k].paid;
-        return { name:k, amount:kids[k]?.amount??0, info:(s?.paymentInfo??'').trim(), type:s?.paymentType??'', paid: isPaid };
-      }).filter(x => x.info);
-    
-    // Payment summary
-    const totalPayments = loserReqs.length;
-    const paidCount = loserReqs.filter(x => x.paid).length;
-    const paymentSummary = totalPayments > 0 ? `
-      <div style="background:rgba(124,77,255,.1);border:1px solid rgba(124,77,255,.2);border-radius:14px;padding:12px;margin-bottom:12px;text-align:left">
-        <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--purple);margin-bottom:6px">💰 Payment Status</div>
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
-          <div style="flex:1;height:6px;background:var(--surface2);border-radius:6px;overflow:hidden">
-            <div style="height:100%;background:linear-gradient(90deg,#00c851,#00e676);width:${(paidCount/totalPayments*100)}%;transition:width .3s"></div>
-          </div>
-          <span style="font-size:13px;font-weight:700">${paidCount}/${totalPayments}</span>
-        </div>
-        <div style="font-size:11px;color:var(--muted)">${paidCount === totalPayments ? '🎉 All paid!' : `${totalPayments - paidCount} pending`}</div>
-      </div>` : '';
-    
-    document.getElementById('announce-requests').innerHTML = loserReqs.length ? paymentSummary + `
-      <div class="modal-requests" style="text-align:left;margin-top:8px;margin-bottom:0">
-        <div class="modal-req-label">📤 Payment Requests</div>
-        <div class="modal-req-sub">Tap QR to pay, then mark as paid</div>
-        ${loserReqs.map(({name,amount,info,type,paid}) => {
-          const pt  = PAYMENT_TYPES.find(p => p.id === type);
-          const url = getRequestUrl(type, info, amount, note);
-          const paidStyle = paid ? 'opacity:0.5;text-decoration:line-through' : '';
-          return `
-          <div class="modal-req-row" style="${paidStyle}">
-            <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
-              <span style="font-size:18px;flex-shrink:0">${paid ? '✅' : pt?.icon??'💳'}</span>
-              <div style="min-width:0">
-                <div style="font-weight:700;color:${COLOR_HEX[name]}">${escHtml(name)}</div>
-                <div style="font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(info)}</div>
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-              <span style="font-size:15px;font-weight:800">$${amount}</span>
-              ${paid ? '<span style="font-size:11px;color:#00c851">Paid</span>' : `
-                <button class="modal-req-btn" onclick="showQrPayment('${escHtml(name)}', ${amount}, '${type}', '${escHtml(info)}', '${month}')">📱 QR</button>
-                ${url ? `<a href="${url}" target="_blank" rel="noopener" class="modal-req-btn">Request ↗</a>`
-                      : `<button class="modal-req-copy" onclick="copyToClipboard('${escHtml(info)}')">📋 Copy</button>`}`}
-            </div>
-          </div>`;
-        }).join('')}
-      </div>` : '';
+    document.getElementById('announce-requests').innerHTML = '';
 
     overlay.classList.remove('hidden');
   }
@@ -1100,16 +1076,37 @@
     overlay.classList.add('hidden');
   }
   function formatMonthKey(k) { if(!k) return '—'; const [y,m]=k.split('-'); return `${MONTHS[parseInt(m)-1]} ${y}`; }
-  function totalPot() { return Object.values(state.kids).reduce((s,k)=>s+k.amount,0); }
+  // ── Pot / Budget helpers ──
+  function getMonthBudget(monthKey) {
+    if (state.budgets && state.budgets[monthKey] !== undefined) return state.budgets[monthKey];
+    if (state.budgets && state.budgets['default'] !== undefined) return state.budgets['default'];
+    return DEFAULT_MONTHLY_POT;
+  }
+  function getCurrentAllocation() {
+    const budget = getMonthBudget(currentMonthKey());
+    return KIDS.length > 0 ? Math.round((budget / KIDS.length) * 100) / 100 : 0;
+  }
+  function getKidRemaining(kid) {
+    const alloc = getCurrentAllocation();
+    const deducted = state.kids[kid]?.deducted ?? 0;
+    const penalty = state.kids[kid]?.penalty ?? 0;
+    return Math.round((alloc - deducted - penalty) * 100) / 100;
+  }
+  function totalDeductedAll() { return Object.values(state.kids).reduce((s,k)=>s+(k.deducted||0),0); }
+  function totalPotRemaining() {
+    return KIDS.reduce((s,kid) => s + Math.max(0, getKidRemaining(kid)), 0);
+  }
   function getWinners() {
-    const min = Math.min(...KIDS.map(k=>state.kids[k]?.amount??0));
-    return KIDS.filter(k=>(state.kids[k]?.amount??0)===min);
+    if (!KIDS.length) return [];
+    const remainings = KIDS.map(k => getKidRemaining(k));
+    const max = Math.max(...remainings);
+    return KIDS.filter(k => getKidRemaining(k) === max);
   }
   function getWorst() {
-    if (totalPot()===0) return [];
-    const max = Math.max(...KIDS.map(k=>state.kids[k]?.amount??0));
-    if (max===0) return [];
-    return KIDS.filter(k=>(state.kids[k]?.amount??0)===max);
+    if (!KIDS.length || totalDeductedAll() === 0) return [];
+    const remainings = KIDS.map(k => getKidRemaining(k));
+    const min = Math.min(...remainings);
+    return KIDS.filter(k => getKidRemaining(k) === min);
   }
   function relativeTime(iso) {
     const diff = (Date.now()-new Date(iso))/1000;
@@ -1317,20 +1314,14 @@
   //  ACTIONS
   // ══════════════════════════════════════════════════════
   function addSwear(kid, categoryId) {
-    const category = CHARGE_CATEGORIES.find(c => c.id === categoryId) || CHARGE_CATEGORIES[1]; // default: moderate
+    const category = CHARGE_CATEGORIES.find(c => c.id === categoryId) || CHARGE_CATEGORIES[1];
     const chargeAmount = category.amount;
-    // Enforce daily charge limit ($10 max per user per day)
-    const todayCharged = getTodayChargedBy(currentUser);
-    if (todayCharged + chargeAmount > DAILY_LIMIT) {
-      toast(`🔒 You've hit your $${DAILY_LIMIT}/day limit — try again tomorrow!`);
-      return;
-    }
     // Haptic feedback on iOS
     if (window.navigator && window.navigator.vibrate) {
       window.navigator.vibrate(10);
     }
-    if (!state.kids[kid]) state.kids[kid] = { amount:0, swears:0 };
-    state.kids[kid].amount += chargeAmount;
+    if (!state.kids[kid]) state.kids[kid] = { deducted:0, swears:0, penalty:0 };
+    state.kids[kid].deducted += chargeAmount;
     state.kids[kid].swears++;
     state.history.unshift({
       kid, ts: new Date().toISOString(), addedBy: currentUser ?? 'Unknown',
@@ -1338,9 +1329,13 @@
     });
     if (state.history.length > 500) state.history.length = 500;
     save(); render();
-    const remaining = DAILY_LIMIT - (todayCharged + chargeAmount);
+    const remaining = getKidRemaining(kid);
     const amtStr = chargeAmount % 1 === 0 ? `$${chargeAmount}` : `$${chargeAmount.toFixed(2)}`;
-    toast(remaining > 0 ? `${kid} owes ${amtStr} ${category.emoji} · $${remaining.toFixed(2)} left today` : `${kid} owes ${amtStr} ${category.emoji} · Daily limit reached!`);
+    if (remaining < 0) {
+      toast(`${kid} -${amtStr} ${category.emoji} · $${Math.abs(remaining).toFixed(2)} over! Carries to next month`);
+    } else {
+      toast(`${kid} -${amtStr} ${category.emoji} · $${remaining.toFixed(2)} remaining`);
+    }
     const card = document.querySelector(`[data-kid="${kid}"]`);
     if (card) { card.classList.remove('pulse'); void card.offsetWidth; card.classList.add('pulse'); }
   }
@@ -1354,9 +1349,9 @@
     if (firstReal === -1) { toast('Nothing to undo!'); return; }
     _undoInProgress = true;
     const entry = state.history.splice(firstReal, 1)[0];
-    const entryAmt = entry.amount || 1; // backward compat with old $1 entries
+    const entryAmt = entry.amount || 1;
     if (state.kids[entry.kid]) {
-      state.kids[entry.kid].amount = Math.max(0, state.kids[entry.kid].amount - entryAmt);
+      state.kids[entry.kid].deducted = Math.max(0, (state.kids[entry.kid].deducted || 0) - entryAmt);
       state.kids[entry.kid].swears = Math.max(0, state.kids[entry.kid].swears - 1);
     }
     save(); render();
@@ -1365,95 +1360,56 @@
   }
 
   function openEndMonth() {
-    const pot=totalPot(), winners=getWinners();
-    const sorted=[...KIDS].sort((a,b)=>(state.kids[a]?.amount??0)-(state.kids[b]?.amount??0));
+    const alloc = getCurrentAllocation();
+    const winners = getWinners();
+    // Sort by remaining (highest first = winner)
+    const sorted = [...KIDS].sort((a,b) => getKidRemaining(b) - getKidRemaining(a));
+    const totalDed = totalDeductedAll();
+    const winnerPrize = winners.reduce((s,k) => s + Math.max(0, getKidRemaining(k)), 0).toFixed(2);
     document.getElementById('modal-sub').textContent =
-      pot===0 ? 'No swears this month — everyone wins! 🎉'
-      : winners.length>1 ? `${winners.join(' & ')} tied with the fewest swears!`
-      : `${winners[0]} had the fewest swears and wins the pot!`;
-    const prize = winners.length>1 ? `Each wins $${(pot/winners.length).toFixed(2)}` : `Wins $${pot}!`;
+      totalDed === 0 ? 'No swears this month — everyone keeps their share! 🎉'
+      : winners.length>1 ? `${winners.join(' & ')} tied with the most remaining!`
+      : `${winners[0]} kept the most money!`;
+    const prize = winners.length > 1 ? `Each kept $${(winnerPrize/winners.length).toFixed(2)}` : `Kept $${winnerPrize}!`;
     document.getElementById('modal-winner-box').innerHTML = `
       <div class="modal-trophy">${winners.length>1?'🤝':'🏆'}</div>
       <div class="modal-winner-name" style="color:${COLOR_HEX[winners[0]]}">${winners.join(' & ')}</div>
       <div class="modal-prize">${prize}</div>`;
-    document.getElementById('modal-rows').innerHTML = sorted.map((kid,i)=>`
+    document.getElementById('modal-rows').innerHTML = sorted.map((kid,i)=>{
+      const rem = getKidRemaining(kid);
+      const swears = state.kids[kid]?.swears??0;
+      return `
       <div class="modal-row">
         <div class="modal-row-left">
           <span>${i===0?'🥇':i===1?'🥈':i===2?'🥉':'4️⃣'}</span>
           <span style="font-weight:700;color:${COLOR_HEX[kid]}">${escHtml(kid)}</span>
         </div>
-        <div class="modal-row-right">${state.kids[kid]?.swears??0} swear${(state.kids[kid]?.swears??0)!==1?'s':''} = $${state.kids[kid]?.amount??0}</div>
-      </div>`).join('');
-    const winnerPays = winners.map(w => {
-      const s = settings.find(x => x.name === w);
-      return { name: w, info: (s?.paymentInfo ?? '').trim(), type: s?.paymentType ?? '' };
-    }).filter(x => x.info);
-    document.getElementById('modal-payment').innerHTML = (pot>0 && winnerPays.length>0) ? `
-      <div class="modal-payment">
-        <div class="modal-pay-label">💸 Pay the winner</div>
-        ${winnerPays.map(({name,info,type}) => {
-          const pt  = PAYMENT_TYPES.find(p => p.id === type);
-          const url = getPaymentUrl(type, info);
-          return `
-          <div class="modal-pay-row" style="flex-direction:column;align-items:stretch;gap:8px">
-            <div style="display:flex;align-items:center;gap:8px">
-              ${pt ? `<span style="font-size:16px">${pt.icon}</span><span style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:1px">${pt.label}</span>` : ''}
-            </div>
-            <div style="display:flex;align-items:center;gap:8px">
-              <div class="modal-pay-info" style="color:${COLOR_HEX[name]};flex:1">${escHtml(info)}</div>
-              ${url ? `<a href="${url}" target="_blank" rel="noopener" class="modal-pay-copy" style="text-decoration:none;background:linear-gradient(135deg,var(--purple),var(--pink));color:#fff">Open ↗</a>` : ''}
-              <button class="modal-pay-copy" onclick="copyToClipboard('${escHtml(info)}')">📋 Copy</button>
-            </div>
-          </div>`;
-        }).join('')}
-        <div class="modal-pay-note">Each person owes ${winners.length>1?'a share of':''} $${pot} to ${winners.join(' & ')}</div>
-      </div>` : '';
-    // ── Send Requests section: one row per loser who owes money ──
-    const monthLabel = new Date().toLocaleString('default',{month:'long',year:'numeric'});
-    const note = `Swear Jar – ${monthLabel}`;
-    const losers = KIDS.filter(k => !winners.includes(k) && (state.kids[k]?.amount ?? 0) > 0);
-    const loserRequests = losers.map(k => {
-      const s = settings.find(x => x.name === k);
-      return { name: k, amount: state.kids[k]?.amount ?? 0,
-               info: (s?.paymentInfo ?? '').trim(), type: s?.paymentType ?? '' };
-    }).filter(x => x.info);
-    document.getElementById('modal-requests').innerHTML = (pot>0 && loserRequests.length>0) ? `
-      <div class="modal-requests">
-        <div class="modal-req-label">📤 Send Payment Requests</div>
-        <div class="modal-req-sub">Tap each to open their app and charge them directly</div>
-        ${loserRequests.map(({name, amount, info, type}) => {
-          const pt  = PAYMENT_TYPES.find(p => p.id === type);
-          const url = getRequestUrl(type, info, amount, note);
-          return `
-          <div class="modal-req-row">
-            <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
-              <span style="font-size:18px;flex-shrink:0">${pt?.icon ?? '💳'}</span>
-              <div style="min-width:0">
-                <div style="font-weight:700;color:${COLOR_HEX[name]}">${escHtml(name)}</div>
-                <div style="font-size:11px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(info)}</div>
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-              <span style="font-size:15px;font-weight:800;color:var(--text)">$${amount}</span>
-              <button class="modal-req-btn" onclick="showQrPayment('${escHtml(name)}', ${amount}, '${type}', '${escHtml(info)}')">📱 QR</button>
-              ${url
-                ? `<a href="${url}" target="_blank" rel="noopener" class="modal-req-btn">Request ↗</a>`
-                : `<button class="modal-req-copy" onclick="copyToClipboard('${escHtml(info)}')">📋 Copy</button>`}
-            </div>
-          </div>`;
-        }).join('')}
-      </div>` : '';
-
+        <div class="modal-row-right">${swears} swear${swears!==1?'s':''} · $${rem.toFixed(2)} remaining${rem < 0 ? ' (overflow!)' : ''}</div>
+      </div>`;
+    }).join('');
+    document.getElementById('modal-payment').innerHTML = '';
+    document.getElementById('modal-requests').innerHTML = '';
     document.getElementById('overlay').classList.add('open');
   }
 
   function confirmEndMonth() {
-    const pot=totalPot(), winners=getWinners(), month=currentMonthKey();
-    state.monthlyResults.unshift({ month, winners, pot, kids: JSON.parse(JSON.stringify(state.kids)) });
-    KIDS.forEach(k=>{state.kids[k]={amount:0,swears:0};});
+    const winners = getWinners(), month = currentMonthKey();
+    const budget = getMonthBudget(month);
+    const alloc = getCurrentAllocation();
+    const winnerPrize = winners.reduce((s,k) => s + Math.max(0, getKidRemaining(k)), 0).toFixed(2);
+    // Build result with overflow tracking
+    const kidsSnapshot = {};
+    const overflows = {};
+    KIDS.forEach(kid => {
+      const rem = getKidRemaining(kid);
+      kidsSnapshot[kid] = { deducted: state.kids[kid]?.deducted??0, swears: state.kids[kid]?.swears??0, remaining: Math.max(0,rem), allocation: alloc };
+      if (rem < 0) overflows[kid] = Math.abs(rem);
+    });
+    state.monthlyResults.unshift({ month, winners, budget, allocation: alloc, winnerPrize: parseFloat(winnerPrize), kids: kidsSnapshot });
+    KIDS.forEach(k=>{state.kids[k]={deducted:0,swears:0,penalty:overflows[k]||0};});
     state.history=[];
     save(); closeModal(); render(); switchView('tracker');
-    toast(`${winners.join(' & ')} win${winners.length>1?'':'s'} $${pot}! 🏆`);
+    toast(`${winners.join(' & ')} keep${winners.length>1?'':'s'} $${winnerPrize}! 🏆`);
   }
 
   function closeModal() { document.getElementById('overlay').classList.remove('open'); }
@@ -1471,10 +1427,16 @@
   }
 
   function render() {
-    const pot=totalPot(), winners=getWinners(), worst=getWorst();
+    const budget = getMonthBudget(currentMonthKey());
+    const alloc = getCurrentAllocation();
+    const potRemaining = totalPotRemaining();
+    const winners = getWinners(), worst = getWorst();
     document.getElementById('month-chip').textContent = formatMonthKey(currentMonthKey());
-    document.getElementById('pot-amount').textContent = `$${pot}`;
-    document.getElementById('pot-leader').textContent = pot>0 ? winners.join(' & ') : '—';
+    document.getElementById('pot-amount').textContent = `$${potRemaining.toFixed(0)}`;
+    document.getElementById('pot-leader').textContent = totalDeductedAll() > 0 ? winners.join(' & ') : '—';
+    // Update pot label to show budget context
+    const potLabelEl = document.getElementById('pot-label');
+    if (potLabelEl) potLabelEl.textContent = `💰 Remaining of $${budget}`;
     // Cleanest Mouth award
     const cleanest = getCleanestMouth();
     const cleanEl = document.getElementById('cleanest-mouth');
@@ -1499,13 +1461,13 @@
       dltEl.className = 'days-left-text' + (left <= 2 ? ' urgent' : '');
       if (dlfEl) dlfEl.style.width = pct + '%';
     }
-    const todayCharged   = getTodayChargedBy(currentUser);
-    const dailyLimitHit  = todayCharged >= DAILY_LIMIT;
-    const dailyRemaining = Math.max(0, DAILY_LIMIT - todayCharged);
     document.getElementById('kids-grid').innerHTML = KIDS.map(kid=>{
-      const {amount=0,swears=0}=state.kids[kid]??{};
-      const isLeading=pot>0&&winners.includes(kid), isWorst=worst.includes(kid);
-      const cls=['kid-card',isLeading?'leading':'',isWorst?'worst':''].filter(Boolean).join(' ');
+      const {swears=0, penalty=0}=state.kids[kid]??{};
+      const remaining = getKidRemaining(kid);
+      const pctLeft = alloc > 0 ? Math.max(0, Math.round((Math.max(0,remaining) / alloc) * 100)) : 100;
+      const isLeading = totalDeductedAll()>0 && winners.includes(kid), isWorst = worst.includes(kid);
+      const isOver = remaining < 0;
+      const cls=['kid-card',isLeading?'leading':'',isWorst?'worst':'',isOver?'overdrawn':''].filter(Boolean).join(' ');
       const streak = getStreak(kid);
       return `
         <div class="${cls}" data-kid="${kid}" style="--c:${COLORS[kid]??'#888'}">
@@ -1513,16 +1475,13 @@
           <div class="kid-crown">👑</div>
           ${renderAvatar(kid, 56, EMOJI[kid]??'🧒', COLORS[kid]??'#888')}
           <div class="kid-name">${escHtml(kid)}</div>
-          <div class="kid-amount">$${amount}</div>
-          <div class="kid-count">${swears} swear${swears!==1?'s':''}</div>
+          <div class="kid-amount ${isOver ? 'overdrawn-amount' : ''}">${isOver ? '-' : ''}$${Math.abs(remaining).toFixed(2)}</div>
+          <div class="kid-count">${swears} swear${swears!==1?'s':''} · $${alloc.toFixed(2)} budget${penalty > 0 ? ` · -$${penalty.toFixed(2)} penalty` : ''}</div>
+          <div class="kid-balance-bar"><div class="kid-balance-fill" style="width:${pctLeft}%;background:${isOver?'#ff4444':COLORS[kid]??'#888'}"></div></div>
           ${streak >= 3 ? `<div class="streak-badge">${getStreakBadge(streak)?.badge ?? '🔥'} ${streak >= 30 ? '30+' : streak}-day streak · ${getStreakBadge(streak)?.label ?? ''}</div>` : ''}
-          ${dailyLimitHit
-            ? `<button class="swear-btn" disabled
-                style="opacity:.4;cursor:not-allowed;font-size:11px;background:#555;letter-spacing:-0.2px"
-                title="$${DAILY_LIMIT} daily charge limit reached">🔒 Daily limit reached</button>`
-            : `<div class="charge-categories">
-                ${CHARGE_CATEGORIES.map(cat => `<button class="charge-cat-btn" style="background:${cat.color}" onclick="addSwear('${escHtml(kid)}','${cat.id}')" title="${cat.label}: $${cat.amount.toFixed(2)}">${cat.emoji} $${cat.amount % 1 === 0 ? cat.amount : cat.amount.toFixed(2)}</button>`).join('')}
-              </div>`}
+          <div class="charge-categories">
+            ${CHARGE_CATEGORIES.map(cat => `<button class="charge-cat-btn" style="background:${cat.color}" onclick="addSwear('${escHtml(kid)}','${cat.id}')" title="${cat.label}: -$${cat.amount.toFixed(2)}">${cat.emoji} -$${cat.amount % 1 === 0 ? cat.amount : cat.amount.toFixed(2)}</button>`).join('')}
+          </div>
         </div>`;
     }).join('');
     const recent=state.history.slice(0,20), actEl=document.getElementById('activity-list');
@@ -1543,7 +1502,7 @@
               </div>
               <div class="activity-right">
                 <div class="activity-time">${relativeTime(entry.ts)}</div>
-                <div class="activity-badge deleted">-$${entry.originalAmount || entry.amount || 1}</div>
+                <div class="activity-badge deleted">+$${entry.originalAmount || entry.amount || 1} restored</div>
               </div>
             </div>`;
         }
@@ -1564,7 +1523,7 @@
               <div class="activity-time">${relativeTime(ts)}</div>
               ${isDisputed
                 ? `<div class="activity-badge disputed-badge">🚩 Disputed</div>`
-                : `<div class="activity-badge">${entry.category ? (CHARGE_CATEGORIES.find(c=>c.id===entry.category)?.emoji??'') + ' ' : ''}+$${entry.amount || 1}</div>`}
+                : `<div class="activity-badge">${entry.category ? (CHARGE_CATEGORIES.find(c=>c.id===entry.category)?.emoji??'') + ' ' : ''}-$${entry.amount || 1}</div>`}
               ${canDispute ? `<button class="activity-dispute-btn" onclick="disputeActivity(${idx})" title="Flag charge as disputed">🚩</button>` : ''}
               ${isDisputed && isCurrentUserParent() ? `<button class="activity-resolve-btn" onclick="resolveDispute(${idx})" title="Resolve dispute (remove charge)">✅</button><button class="activity-dismiss-btn" onclick="dismissDispute(${idx})" title="Dismiss dispute (keep charge)">❌</button>` : ''}
               ${canDel ? `<button class="activity-del-btn" onclick="deleteActivity(${idx})" title="Delete this entry">🗑️</button>` : ''}
@@ -1586,13 +1545,14 @@
     }
     el.innerHTML=state.monthlyResults.map(r=>{
       const allKids=Object.keys(r.kids);
-      const sorted=[...allKids].sort((a,b)=>(r.kids[a]?.amount??0)-(r.kids[b]?.amount??0));
+      const sorted=[...allKids].sort((a,b)=>(r.kids[b]?.remaining??0)-(r.kids[a]?.remaining??0));
       const wNames=(r.winners??[r.winner]).join(' & ');
       const wColor=COLOR_HEX[(r.winners??[r.winner])[0]]??'#fff';
-      const prizeStr=r.winners?.length>1?`Each won $${(r.pot/r.winners.length).toFixed(2)}`:`Won $${r.pot}`;
+      const prize = r.winnerPrize ?? r.pot ?? 0;
+      const prizeStr=r.winners?.length>1?`Each kept $${(prize/r.winners.length).toFixed(2)}`:`Kept $${prize.toFixed ? prize.toFixed(2) : prize}`;
       return `
         <div class="hist-card">
-          <div class="hist-month">${formatMonthKey(r.month)}</div>
+          <div class="hist-month">${formatMonthKey(r.month)} · Budget: $${r.budget ?? '?'}</div>
           <div class="hist-winner-box">
             <div class="hist-trophy">🏆</div>
             <div class="hist-winner-name" style="color:${wColor}">${wNames}</div>
@@ -1602,7 +1562,7 @@
             ${sorted.map(kid=>`
               <div class="hist-row">
                 <div class="hist-row-left"><div class="hist-row-dot" style="background:${COLOR_HEX[kid]??'#888'}"></div><span class="hist-row-name" style="color:${COLOR_HEX[kid]??'#888'}">${escHtml(kid)}</span></div>
-                <div class="hist-row-amount">${r.kids[kid]?.swears??0} swears = $${r.kids[kid]?.amount??0}</div>
+                <div class="hist-row-amount">${r.kids[kid]?.swears??0} swears · $${(r.kids[kid]?.remaining??0).toFixed ? (r.kids[kid]?.remaining??0).toFixed(2) : r.kids[kid]?.remaining??0} remaining</div>
               </div>`).join('')}
           </div>
         </div>`;
@@ -1638,11 +1598,12 @@
       document.getElementById('stats-grid').innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:32px 0;color:var(--muted)"><div style="font-size:32px;margin-bottom:8px">😇</div><div style="font-size:15px;font-weight:600">Perfect month so far!</div><div style="font-size:13px;margin-top:4px">No swears recorded yet</div></div>`;
     } else {
       document.getElementById('stats-grid').innerHTML=KIDS.map(kid=>{
-        const {amount=0,swears=0}=state.kids[kid]??{};
+        const {swears=0}=state.kids[kid]??{};
+        const remaining = getKidRemaining(kid);
         let worstDay=null,worstCount=0;
         Object.entries(byDate).forEach(([dt,d])=>{const c=d[kid]??0;if(c>worstCount){worstCount=c;worstDay=dt;}});
         const wl=worstDay?`Worst: ${MONTHS[parseInt(worstDay.split('-')[1])-1].slice(0,3)} ${parseInt(worstDay.split('-')[2])} (${worstCount})`:'No swears yet!';
-        return `<div class="stat-card" style="--c:${COLOR_HEX[kid]??'#888'}"><div class="stat-name">${escHtml(kid)}</div><div class="stat-swears">${swears}</div><div class="stat-label">swear${swears!==1?'s':''} = $${amount}</div><div class="stat-worst">${wl}</div></div>`;
+        return `<div class="stat-card" style="--c:${COLOR_HEX[kid]??'#888'}"><div class="stat-name">${escHtml(kid)}</div><div class="stat-swears">${swears}</div><div class="stat-label">swear${swears!==1?'s':''} · $${remaining.toFixed(2)} left</div><div class="stat-worst">${wl}</div></div>`;
       }).join('');
     }
   }
@@ -1771,6 +1732,92 @@
       renderAlexaExamples();
       updateAlexaStatus();
     }
+
+    // Budget section — admin only
+    const budgetSection = document.getElementById('budget-section');
+    if (budgetSection) budgetSection.style.display = (currentUser === 'admin') ? '' : 'none';
+    if (currentUser === 'admin') renderBudgetList();
+  }
+
+  function renderBudgetList() {
+    const el = document.getElementById('budget-list');
+    if (!el) return;
+    const mk = currentMonthKey();
+    // Show current month + up to 12 future months
+    const monthKeys = [];
+    const [y,m] = mk.split('-').map(Number);
+    for (let i = 0; i < 13; i++) {
+      const month = ((m-1+i) % 12) + 1;
+      const year = y + Math.floor((m-1+i)/12);
+      monthKeys.push(`${year}-${String(month).padStart(2,'0')}`);
+    }
+    // Only show months that are set or the current month
+    const shownKeys = monthKeys.filter(k => k === mk || (state.budgets && state.budgets[k] !== undefined));
+    // Always show current month
+    if (!shownKeys.includes(mk)) shownKeys.unshift(mk);
+
+    el.innerHTML = shownKeys.map(k => {
+      const isCurrent = k === mk;
+      const val = state.budgets?.[k] ?? DEFAULT_MONTHLY_POT;
+      const perPerson = KIDS.length > 0 ? (val / KIDS.length).toFixed(2) : val.toFixed(2);
+      return `
+        <div class="budget-row" data-month="${k}">
+          <div class="budget-row-label">
+            <span class="budget-month-name">${formatMonthKey(k)}</span>
+            ${isCurrent ? '<span class="budget-current-badge">Current</span>' : ''}
+          </div>
+          <div class="budget-row-input-wrap">
+            <span class="budget-dollar">$</span>
+            <input type="number" class="budget-input" value="${val}" min="0" step="10"
+              data-month="${k}" onchange="updateBudget('${k}', this.value)"
+              ${isCurrent && totalDeductedAll() > 0 ? 'disabled title="Cannot change — month in progress"' : ''} />
+          </div>
+          <div class="budget-per-person">$${perPerson}/person</div>
+          ${!isCurrent ? `<button class="budget-remove-btn" onclick="removeBudget('${k}')">×</button>` : '<div style="width:24px"></div>'}
+        </div>`;
+    }).join('');
+  }
+
+  function updateBudget(monthKey, value) {
+    const val = parseFloat(value);
+    if (isNaN(val) || val < 0) return;
+    if (!state.budgets) state.budgets = {};
+    state.budgets[monthKey] = val;
+    save();
+    // Also persist budgets to Firebase
+    if (fbDb) { try { fbDb.ref('/swearjar/gameState/budgets').set(state.budgets); } catch(e) {} }
+    renderBudgetList();
+    render();
+    toast(`Budget for ${formatMonthKey(monthKey)} set to $${val}`);
+  }
+
+  function removeBudget(monthKey) {
+    if (state.budgets) delete state.budgets[monthKey];
+    save();
+    if (fbDb) { try { fbDb.ref('/swearjar/gameState/budgets').set(state.budgets); } catch(e) {} }
+    renderBudgetList();
+    toast(`Removed budget for ${formatMonthKey(monthKey)}`);
+  }
+
+  function addBudgetMonth() {
+    const mk = currentMonthKey();
+    const [y,m] = mk.split('-').map(Number);
+    // Find the next month that doesn't have a budget set
+    for (let i = 1; i <= 12; i++) {
+      const month = ((m-1+i) % 12) + 1;
+      const year = y + Math.floor((m-1+i)/12);
+      const key = `${year}-${String(month).padStart(2,'0')}`;
+      if (!state.budgets?.[key]) {
+        if (!state.budgets) state.budgets = {};
+        state.budgets[key] = DEFAULT_MONTHLY_POT;
+        save();
+        if (fbDb) { try { fbDb.ref('/swearjar/gameState/budgets').set(state.budgets); } catch(e) {} }
+        renderBudgetList();
+        toast(`Added ${formatMonthKey(key)}`);
+        return;
+      }
+    }
+    toast('All 12 future months already have budgets set');
   }
 
   function addSettingsRow() {
@@ -1796,7 +1843,7 @@
     PAY_INFO =Object.fromEntries(settings.map(s=>[s.name,s.paymentInfo??'']));
     AVATARS  =Object.fromEntries(settings.map(s=>[s.name,s.avatar??'']));
     const ns={kids:{},history:state.history,monthlyResults:state.monthlyResults,currentMonth:state.currentMonth};
-    KIDS.forEach((name,i)=>{const on=oldKids[i];ns.kids[name]=(on&&state.kids[on])?state.kids[on]:(state.kids[name]??{amount:0,swears:0});});
+    KIDS.forEach((name,i)=>{const on=oldKids[i];ns.kids[name]=(on&&state.kids[on])?state.kids[on]:(state.kids[name]??{deducted:0,swears:0,penalty:0});});
     state=ns;
     // Save Alexa Skill ID if admin
     if (currentUser === 'admin') {
