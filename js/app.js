@@ -1747,7 +1747,8 @@
     const el = document.getElementById('budget-list');
     if (!el) return;
     const mk = currentMonthKey();
-    // Show current month + up to 12 future months
+    const defaultBudget = getDefaultBudget();
+    // Build current + 12 future month keys
     const monthKeys = [];
     const [y,m] = mk.split('-').map(Number);
     for (let i = 0; i < 13; i++) {
@@ -1755,40 +1756,79 @@
       const year = y + Math.floor((m-1+i)/12);
       monthKeys.push(`${year}-${String(month).padStart(2,'0')}`);
     }
-    // Only show months that are set or the current month
-    const shownKeys = monthKeys.filter(k => k === mk || (state.budgets && state.budgets[k] !== undefined));
-    // Always show current month
-    if (!shownKeys.includes(mk)) shownKeys.unshift(mk);
 
-    el.innerHTML = shownKeys.map(k => {
+    // Default row at top
+    const currentDefault = state.budgets?.['default'] ?? defaultBudget;
+    const defPerPerson = KIDS.length > 0 ? (currentDefault / KIDS.length).toFixed(2) : currentDefault.toFixed(2);
+
+    let html = `
+      <div class="budget-row budget-default-row">
+        <div class="budget-row-label">
+          <span class="budget-month-name">Default</span>
+          <span class="budget-default-badge">All months</span>
+        </div>
+        <div class="budget-row-input-wrap">
+          <span class="budget-dollar">$</span>
+          <input type="number" class="budget-input" value="${currentDefault}" min="0" step="5"
+            onchange="updateBudgetDefault(this.value)" />
+        </div>
+        <div class="budget-per-person">$${defPerPerson}/person</div>
+        <div style="width:24px"></div>
+      </div>
+      <div class="budget-divider"></div>`;
+
+    // All 13 months
+    html += monthKeys.map(k => {
       const isCurrent = k === mk;
-      const val = state.budgets?.[k] ?? getDefaultBudget();
+      const hasOverride = state.budgets && state.budgets[k] !== undefined;
+      const val = hasOverride ? state.budgets[k] : currentDefault;
       const perPerson = KIDS.length > 0 ? (val / KIDS.length).toFixed(2) : val.toFixed(2);
       return `
-        <div class="budget-row" data-month="${k}">
+        <div class="budget-row ${hasOverride ? 'budget-has-override' : ''}" data-month="${k}">
           <div class="budget-row-label">
             <span class="budget-month-name">${formatMonthKey(k)}</span>
             ${isCurrent ? '<span class="budget-current-badge">Current</span>' : ''}
+            ${hasOverride ? '<span class="budget-override-badge">Custom</span>' : ''}
           </div>
           <div class="budget-row-input-wrap">
             <span class="budget-dollar">$</span>
-            <input type="number" class="budget-input" value="${val}" min="0" step="10"
+            <input type="number" class="budget-input ${hasOverride ? '' : 'budget-input-default'}" value="${val}" min="0" step="5"
               data-month="${k}" onchange="updateBudget('${k}', this.value)"
-              ${isCurrent && totalDeductedAll() > 0 ? 'disabled title="Cannot change — month in progress"' : ''} />
+              ${isCurrent && totalDeductedAll() > 0 ? 'disabled title="Cannot change — month in progress"' : ''}
+              placeholder="${currentDefault}" />
           </div>
           <div class="budget-per-person">$${perPerson}/person</div>
-          ${!isCurrent ? `<button class="budget-remove-btn" onclick="removeBudget('${k}')">×</button>` : '<div style="width:24px"></div>'}
+          ${hasOverride && !(isCurrent && totalDeductedAll() > 0) ? `<button class="budget-remove-btn" onclick="removeBudget('${k}')" title="Reset to default">↩</button>` : '<div style="width:24px"></div>'}
         </div>`;
     }).join('');
+
+    el.innerHTML = html;
+  }
+
+  function updateBudgetDefault(value) {
+    const val = parseFloat(value);
+    if (isNaN(val) || val < 0) return;
+    if (!state.budgets) state.budgets = {};
+    state.budgets['default'] = val;
+    save();
+    if (fbDb) { try { fbDb.ref('/swearjar/gameState/budgets').set(state.budgets); } catch(e) {} }
+    renderBudgetList();
+    render();
+    toast(`Default budget set to $${val}`);
   }
 
   function updateBudget(monthKey, value) {
     const val = parseFloat(value);
     if (isNaN(val) || val < 0) return;
+    const currentDefault = state.budgets?.['default'] ?? getDefaultBudget();
     if (!state.budgets) state.budgets = {};
-    state.budgets[monthKey] = val;
+    // If the value matches the default, remove the override instead of storing it
+    if (val === currentDefault) {
+      delete state.budgets[monthKey];
+    } else {
+      state.budgets[monthKey] = val;
+    }
     save();
-    // Also persist budgets to Firebase
     if (fbDb) { try { fbDb.ref('/swearjar/gameState/budgets').set(state.budgets); } catch(e) {} }
     renderBudgetList();
     render();
@@ -1800,29 +1840,10 @@
     save();
     if (fbDb) { try { fbDb.ref('/swearjar/gameState/budgets').set(state.budgets); } catch(e) {} }
     renderBudgetList();
-    toast(`Removed budget for ${formatMonthKey(monthKey)}`);
+    render();
+    toast(`${formatMonthKey(monthKey)} reset to default`);
   }
 
-  function addBudgetMonth() {
-    const mk = currentMonthKey();
-    const [y,m] = mk.split('-').map(Number);
-    // Find the next month that doesn't have a budget set
-    for (let i = 1; i <= 12; i++) {
-      const month = ((m-1+i) % 12) + 1;
-      const year = y + Math.floor((m-1+i)/12);
-      const key = `${year}-${String(month).padStart(2,'0')}`;
-      if (!state.budgets?.[key]) {
-        if (!state.budgets) state.budgets = {};
-        state.budgets[key] = getDefaultBudget();
-        save();
-        if (fbDb) { try { fbDb.ref('/swearjar/gameState/budgets').set(state.budgets); } catch(e) {} }
-        renderBudgetList();
-        toast(`Added ${formatMonthKey(key)}`);
-        return;
-      }
-    }
-    toast('All 12 future months already have budgets set');
-  }
 
   function addSettingsRow() {
     if (settings.length>=10){toast('Max 10 people!');return;}
