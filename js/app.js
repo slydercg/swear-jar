@@ -1594,8 +1594,8 @@
   }
   function renderReports() {
     const max=state.monthlyResults.length;
-    document.getElementById('rep-prev').disabled=(reportMonthIndex>=max);
-    document.getElementById('rep-next').disabled=(reportMonthIndex<=0);
+    document.getElementById('rep-prev').disabled=(reportMonthIndex>=max);  // ‹ disabled when at oldest month
+    document.getElementById('rep-next').disabled=(reportMonthIndex<=0);    // › disabled when at current month
     const {monthKey,history,pastResult}=getReportData();
     document.getElementById('rep-month-label').textContent=formatMonthKey(monthKey);
     if (pastResult) { renderPastReports(pastResult); return; }
