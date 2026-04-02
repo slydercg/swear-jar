@@ -18,23 +18,24 @@ const {
   calculateMonthEnd,
   getFutureMonthKeys,
   CHARGE_CATEGORIES,
-  DEFAULT_MONTHLY_POT,
+  DEFAULT_PER_PERSON,
 } = require('../js/core');
 
 // ── Budget / Pot helpers ──────────────────────────────────────
 
 describe('getMonthlyBudget', () => {
   test('returns specific month budget when set', () => {
-    expect(getMonthlyBudget({ '2026-04': 200 }, '2026-04')).toBe(200);
+    expect(getMonthlyBudget({ '2026-04': 200 }, '2026-04', 4)).toBe(200);
   });
 
   test('falls back to default key', () => {
-    expect(getMonthlyBudget({ default: 150 }, '2026-05')).toBe(150);
+    expect(getMonthlyBudget({ default: 150 }, '2026-05', 4)).toBe(150);
   });
 
-  test('falls back to DEFAULT_MONTHLY_POT when no budget set', () => {
-    expect(getMonthlyBudget({}, '2026-04')).toBe(DEFAULT_MONTHLY_POT);
-    expect(getMonthlyBudget(null, '2026-04')).toBe(DEFAULT_MONTHLY_POT);
+  test('falls back to DEFAULT_PER_PERSON * numKids when no budget set', () => {
+    expect(getMonthlyBudget({}, '2026-04', 4)).toBe(40); // $10 * 4
+    expect(getMonthlyBudget({}, '2026-04', 6)).toBe(60); // $10 * 6
+    expect(getMonthlyBudget(null, '2026-04', 4)).toBe(40);
   });
 });
 

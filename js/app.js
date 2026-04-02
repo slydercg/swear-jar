@@ -11,8 +11,8 @@
   ];
   // Default charge amount (backward compat)
   const CHARGE_AMOUNT = 1;
-  // Default monthly pot amount
-  const DEFAULT_MONTHLY_POT = 100;
+  // Default per-person allocation per month
+  const DEFAULT_PER_PERSON = 10;
 
   // ══════════════════════════════════════════════════════
   //  THEME TOGGLE
@@ -1077,10 +1077,11 @@
   }
   function formatMonthKey(k) { if(!k) return '—'; const [y,m]=k.split('-'); return `${MONTHS[parseInt(m)-1]} ${y}`; }
   // ── Pot / Budget helpers ──
+  function getDefaultBudget() { return DEFAULT_PER_PERSON * KIDS.length; }
   function getMonthBudget(monthKey) {
     if (state.budgets && state.budgets[monthKey] !== undefined) return state.budgets[monthKey];
     if (state.budgets && state.budgets['default'] !== undefined) return state.budgets['default'];
-    return DEFAULT_MONTHLY_POT;
+    return getDefaultBudget();
   }
   function getCurrentAllocation() {
     const budget = getMonthBudget(currentMonthKey());
@@ -1432,11 +1433,14 @@
     const potRemaining = totalPotRemaining();
     const winners = getWinners(), worst = getWorst();
     document.getElementById('month-chip').textContent = formatMonthKey(currentMonthKey());
-    document.getElementById('pot-amount').textContent = `$${potRemaining.toFixed(0)}`;
+    document.getElementById('pot-amount').textContent = `$${potRemaining.toFixed(2)}`;
     document.getElementById('pot-leader').textContent = totalDeductedAll() > 0 ? winners.join(' & ') : '—';
-    // Update pot label to show budget context
+    // Update pot label to show remaining / total
     const potLabelEl = document.getElementById('pot-label');
-    if (potLabelEl) potLabelEl.textContent = `💰 Remaining of $${budget}`;
+    if (potLabelEl) potLabelEl.textContent = `💰 Remaining of $${budget.toFixed(2)}`;
+    // Show per-person breakdown
+    const potSubEl = document.getElementById('pot-sub');
+    if (potSubEl) potSubEl.textContent = `${KIDS.length} participants · $${alloc.toFixed(2)} each`;
     // Cleanest Mouth award
     const cleanest = getCleanestMouth();
     const cleanEl = document.getElementById('cleanest-mouth');
@@ -1475,8 +1479,8 @@
           <div class="kid-crown">👑</div>
           ${renderAvatar(kid, 56, EMOJI[kid]??'🧒', COLORS[kid]??'#888')}
           <div class="kid-name">${escHtml(kid)}</div>
-          <div class="kid-amount ${isOver ? 'overdrawn-amount' : ''}">${isOver ? '-' : ''}$${Math.abs(remaining).toFixed(2)}</div>
-          <div class="kid-count">${swears} swear${swears!==1?'s':''} · $${alloc.toFixed(2)} budget${penalty > 0 ? ` · -$${penalty.toFixed(2)} penalty` : ''}</div>
+          <div class="kid-amount ${isOver ? 'overdrawn-amount' : ''}">${isOver ? '-' : ''}$${Math.abs(remaining).toFixed(2)} <span class="kid-amount-total">/ $${alloc.toFixed(2)}</span></div>
+          <div class="kid-count">${swears} swear${swears!==1?'s':''}${penalty > 0 ? ` · -$${penalty.toFixed(2)} penalty` : ''}</div>
           <div class="kid-balance-bar"><div class="kid-balance-fill" style="width:${pctLeft}%;background:${isOver?'#ff4444':COLORS[kid]??'#888'}"></div></div>
           ${streak >= 3 ? `<div class="streak-badge">${getStreakBadge(streak)?.badge ?? '🔥'} ${streak >= 30 ? '30+' : streak}-day streak · ${getStreakBadge(streak)?.label ?? ''}</div>` : ''}
           <div class="charge-categories">
@@ -1758,7 +1762,7 @@
 
     el.innerHTML = shownKeys.map(k => {
       const isCurrent = k === mk;
-      const val = state.budgets?.[k] ?? DEFAULT_MONTHLY_POT;
+      const val = state.budgets?.[k] ?? getDefaultBudget();
       const perPerson = KIDS.length > 0 ? (val / KIDS.length).toFixed(2) : val.toFixed(2);
       return `
         <div class="budget-row" data-month="${k}">
@@ -1809,7 +1813,7 @@
       const key = `${year}-${String(month).padStart(2,'0')}`;
       if (!state.budgets?.[key]) {
         if (!state.budgets) state.budgets = {};
-        state.budgets[key] = DEFAULT_MONTHLY_POT;
+        state.budgets[key] = getDefaultBudget();
         save();
         if (fbDb) { try { fbDb.ref('/swearjar/gameState/budgets').set(state.budgets); } catch(e) {} }
         renderBudgetList();
