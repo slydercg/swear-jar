@@ -50,6 +50,51 @@
     }
   }
 
+  // ══════════════════════════════════════════════════════
+  //  POT CARD THEME
+  // ══════════════════════════════════════════════════════
+  const POT_THEME_KEY = 'swearjar-pot-theme';
+  const POT_THEMES = [
+    { id: 'midnight',  label: 'Midnight' },
+    { id: 'ocean',     label: 'Ocean' },
+    { id: 'forest',    label: 'Forest' },
+    { id: 'ember',     label: 'Ember' },
+    { id: 'slate',     label: 'Slate' },
+    { id: 'royal',     label: 'Royal' },
+    { id: 'charcoal',  label: 'Charcoal' },
+  ];
+
+  function loadPotTheme() {
+    return localStorage.getItem(POT_THEME_KEY) || 'midnight';
+  }
+  function savePotTheme(themeId) {
+    localStorage.setItem(POT_THEME_KEY, themeId);
+    if (fbDb) { try { fbDb.ref('/swearjar/potTheme').set(themeId); } catch(e) {} }
+  }
+  function applyPotTheme(themeId) {
+    const card = document.querySelector('.pot-card');
+    if (!card) return;
+    // Remove all theme classes
+    POT_THEMES.forEach(t => card.classList.remove('theme-' + t.id));
+    // Add selected theme
+    card.classList.add('theme-' + (themeId || 'midnight'));
+  }
+  function renderThemePicker() {
+    const el = document.getElementById('theme-picker');
+    if (!el) return;
+    const current = loadPotTheme();
+    el.innerHTML = POT_THEMES.map(t =>
+      `<button class="theme-swatch theme-swatch-${t.id} ${t.id === current ? 'active' : ''}"
+        onclick="selectPotTheme('${t.id}')" title="${t.label}"></button>`
+    ).join('');
+  }
+  function selectPotTheme(themeId) {
+    savePotTheme(themeId);
+    applyPotTheme(themeId);
+    renderThemePicker();
+    toast(`Theme: ${POT_THEMES.find(t=>t.id===themeId)?.label}`);
+  }
+
   const FB_CONFIG_KEY = 'swearjar2-firebase';
   let fbDb = null, fbConnected = false, fbFirstLoadDone = false, _fbSyncTimeout = null;
   let _fbInitialized = false; // guard against double-registration
@@ -180,6 +225,17 @@
       };
       fbDb.ref('/swearjar/appUsers').on('value', usersHandler);
       _fbListeners['/swearjar/appUsers'] = usersHandler;
+
+      // Pot theme listener
+      const potThemeHandler = snap => {
+        const val = snap.val();
+        if (val && typeof val === 'string') {
+          localStorage.setItem(POT_THEME_KEY, val);
+          applyPotTheme(val);
+        }
+      };
+      fbDb.ref('/swearjar/potTheme').on('value', potThemeHandler);
+      _fbListeners['/swearjar/potTheme'] = potThemeHandler;
 
       // Game state listener — primary driver
       const gameStateHandler = snap => {
@@ -1428,6 +1484,7 @@
   }
 
   function render() {
+    applyPotTheme(loadPotTheme());
     const budget = getMonthBudget(currentMonthKey());
     const alloc = getCurrentAllocation();
     const potRemaining = totalPotRemaining();
@@ -1758,6 +1815,11 @@
     }
 
     // Budget section — admin only
+    // Theme picker — admin only
+    const themeSection = document.getElementById('theme-section');
+    if (themeSection) themeSection.style.display = (currentUser === 'admin') ? '' : 'none';
+    if (currentUser === 'admin') renderThemePicker();
+
     const budgetSection = document.getElementById('budget-section');
     if (budgetSection) budgetSection.style.display = (currentUser === 'admin') ? '' : 'none';
     if (currentUser === 'admin') renderBudgetList();

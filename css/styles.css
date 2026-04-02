@@ -115,7 +115,7 @@
     }
     .theme-toggle:active { background: var(--border); }
     .pot-card {
-      background: linear-gradient(135deg, #6a3de8, #c2185b);
+      background: var(--pot-bg, linear-gradient(135deg, #1a1a2e, #16213e));
       border-radius: 16px; padding: 13px 16px;
       display: flex; align-items: center; justify-content: space-between;
       color: #ffffff;
@@ -128,6 +128,15 @@
     .pot-leader-label { font-size: 10px; color: rgba(255,255,255,.8); text-transform: uppercase; letter-spacing: 1px; }
     .pot-leader-name  { font-size: 14px; font-weight: 800; margin-top: 2px; display: flex; flex-direction: column; gap: 1px; color: #ffffff; }
     .pot-leader-amount { font-size: 11px; font-weight: 600; color: rgba(255,255,255,.8); }
+
+    /* ════════ POT CARD COLOR THEMES ════════ */
+    .pot-card.theme-midnight   { --pot-bg: linear-gradient(135deg, #1a1a2e, #16213e); }
+    .pot-card.theme-ocean      { --pot-bg: linear-gradient(135deg, #0f3460, #1a5276); }
+    .pot-card.theme-forest     { --pot-bg: linear-gradient(135deg, #1b4332, #2d6a4f); }
+    .pot-card.theme-ember      { --pot-bg: linear-gradient(135deg, #6b2737, #b7410e); }
+    .pot-card.theme-slate      { --pot-bg: linear-gradient(135deg, #2c3e50, #4a6274); }
+    .pot-card.theme-royal      { --pot-bg: linear-gradient(135deg, #4a1a8a, #6a3de8); }
+    .pot-card.theme-charcoal   { --pot-bg: linear-gradient(135deg, #1c1c1c, #383838); }
     .days-left-bar {
       display: flex; align-items: center; justify-content: space-between; gap: 10px;
       background: var(--surface2); border-radius: 12px; padding: 8px 14px; margin-top: 8px;
@@ -660,6 +669,23 @@
       transition: background .15s, border-color .15s; -webkit-appearance: none;
     }
     .btn-export-csv:active { background: var(--surface2); border-color: var(--purple); }
+
+    /* ════════ THEME PICKER ════════ */
+    .theme-picker { display: flex; flex-wrap: wrap; gap: 8px; }
+    .theme-swatch {
+      width: 40px; height: 40px; border-radius: 12px; border: 3px solid transparent;
+      cursor: pointer; transition: border-color .15s, transform .1s;
+      -webkit-appearance: none; padding: 0;
+    }
+    .theme-swatch:active { transform: scale(.9); }
+    .theme-swatch.active { border-color: var(--purple); box-shadow: 0 0 0 2px rgba(124,77,255,.3); }
+    .theme-swatch-midnight  { background: linear-gradient(135deg, #1a1a2e, #16213e); }
+    .theme-swatch-ocean     { background: linear-gradient(135deg, #0f3460, #1a5276); }
+    .theme-swatch-forest    { background: linear-gradient(135deg, #1b4332, #2d6a4f); }
+    .theme-swatch-ember     { background: linear-gradient(135deg, #6b2737, #b7410e); }
+    .theme-swatch-slate     { background: linear-gradient(135deg, #2c3e50, #4a6274); }
+    .theme-swatch-royal     { background: linear-gradient(135deg, #4a1a8a, #6a3de8); }
+    .theme-swatch-charcoal  { background: linear-gradient(135deg, #1c1c1c, #383838); }
 
     /* ════════ BUDGET MANAGEMENT ════════ */
     .budget-card {
