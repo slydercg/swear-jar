@@ -1591,23 +1591,32 @@
     document.getElementById('rep-month-label').textContent=formatMonthKey(monthKey);
     if (pastResult) { renderPastReports(pastResult); return; }
     const byDate={};
-    (history||[]).forEach(({kid,ts})=>{const d=ts.split('T')[0];if(!byDate[d])byDate[d]={};byDate[d][kid]=(byDate[d][kid]||0)+1;});
-    const now=new Date(), mPfx=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`, dates=[];
-    for(let d=1;d<=now.getDate();d++) dates.push(`${mPfx}-${String(d).padStart(2,'0')}`);
-    const maxVal=Math.max(1,...dates.map(dt=>KIDS.reduce((s,k)=>s+(byDate[dt]?.[k]??0),0)));
-    drawChart(dates,byDate,maxVal);
-    document.getElementById('chart-legend').innerHTML=KIDS.map(k=>`<div class="legend-item"><div class="legend-dot" style="background:${COLOR_HEX[k]??'#888'}"></div><span>${escHtml(k)}</span></div>`).join('');
+    (history||[]).forEach(entry => {
+      if (!entry || entry.type === 'deletion' || !entry.ts || !entry.kid) return;
+      const d = entry.ts.split('T')[0];
+      if (!byDate[d]) byDate[d] = {};
+      byDate[d][entry.kid] = (byDate[d][entry.kid] || 0) + 1;
+    });
+    // Use EST date to match the month key system
+    const estNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/New_York' }));
+    const mPfx = `${estNow.getFullYear()}-${String(estNow.getMonth()+1).padStart(2,'0')}`;
+    const dates = [];
+    for (let d = 1; d <= estNow.getDate(); d++) dates.push(`${mPfx}-${String(d).padStart(2,'0')}`);
+    const maxVal = Math.max(1, ...dates.map(dt => KIDS.reduce((s,k) => s + (byDate[dt]?.[k] ?? 0), 0)));
+    drawChart(dates, byDate, maxVal);
+    document.getElementById('chart-legend').innerHTML = KIDS.map(k => `<div class="legend-item"><div class="legend-dot" style="background:${COLOR_HEX[k]??'#888'}"></div><span>${escHtml(k)}</span></div>`).join('');
     const hasAnySwears = KIDS.some(kid => (state.kids[kid]?.swears ?? 0) > 0);
     if (!hasAnySwears) {
       document.getElementById('stats-grid').innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:32px 0;color:var(--muted)"><div style="font-size:32px;margin-bottom:8px">😇</div><div style="font-size:15px;font-weight:600">Perfect month so far!</div><div style="font-size:13px;margin-top:4px">No swears recorded yet</div></div>`;
     } else {
+      const alloc = getCurrentAllocation();
       document.getElementById('stats-grid').innerHTML=KIDS.map(kid=>{
         const {swears=0}=state.kids[kid]??{};
         const remaining = getKidRemaining(kid);
         let worstDay=null,worstCount=0;
         Object.entries(byDate).forEach(([dt,d])=>{const c=d[kid]??0;if(c>worstCount){worstCount=c;worstDay=dt;}});
-        const wl=worstDay?`Worst: ${MONTHS[parseInt(worstDay.split('-')[1])-1].slice(0,3)} ${parseInt(worstDay.split('-')[2])} (${worstCount})`:'No swears yet!';
-        return `<div class="stat-card" style="--c:${COLOR_HEX[kid]??'#888'}"><div class="stat-name">${escHtml(kid)}</div><div class="stat-swears">${swears}</div><div class="stat-label">swear${swears!==1?'s':''} · $${remaining.toFixed(2)} left</div><div class="stat-worst">${wl}</div></div>`;
+        const wl=worstDay?`Worst: ${MONTHS[parseInt(worstDay.split('-')[1])-1].slice(0,3)} ${parseInt(worstDay.split('-')[2])} (${worstCount})`:'Clean!';
+        return `<div class="stat-card" style="--c:${COLOR_HEX[kid]??'#888'}"><div class="stat-name">${escHtml(kid)}</div><div class="stat-swears">${swears}</div><div class="stat-label">swear${swears!==1?'s':''} · $${remaining.toFixed(2)} / $${alloc.toFixed(2)}</div><div class="stat-worst">${wl}</div></div>`;
       }).join('');
     }
   }
@@ -1618,9 +1627,11 @@
     drawTotalsChart(allKids,totals,maxVal);
     document.getElementById('chart-legend').innerHTML=allKids.map(k=>`<div class="legend-item"><div class="legend-dot" style="background:${COLOR_HEX[k]??'#888'}"></div><span>${escHtml(k)}: ${r.kids[k]?.swears??0} swears</span></div>`).join('');
     document.getElementById('stats-grid').innerHTML=allKids.map(kid=>{
-      const {amount=0,swears=0}=r.kids[kid]??{};
+      const swears = r.kids[kid]?.swears ?? 0;
+      const remaining = r.kids[kid]?.remaining ?? 0;
+      const allocation = r.kids[kid]?.allocation ?? r.allocation ?? 0;
       const isW=(r.winners??[r.winner]).includes(kid);
-      return `<div class="stat-card" style="--c:${COLOR_HEX[kid]??'#888'}"><div class="stat-name">${escHtml(kid)} ${isW?'🏆':''}</div><div class="stat-swears">${swears}</div><div class="stat-label">swear${swears!==1?'s':''} = $${amount}</div></div>`;
+      return `<div class="stat-card" style="--c:${COLOR_HEX[kid]??'#888'}"><div class="stat-name">${escHtml(kid)} ${isW?'🏆':''}</div><div class="stat-swears">${swears}</div><div class="stat-label">swear${swears!==1?'s':''} · $${remaining.toFixed ? remaining.toFixed(2) : remaining} / $${allocation.toFixed ? allocation.toFixed(2) : allocation}</div></div>`;
     }).join('');
   }
   function rrect(ctx,x,y,w,h,r){r=Math.min(r,h/2,w/2);ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h);ctx.lineTo(x,y+h);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();}
@@ -1769,10 +1780,10 @@
         </div>
         <div class="budget-row-input-wrap">
           <span class="budget-dollar">$</span>
-          <input type="number" class="budget-input" value="${currentDefault}" min="0" step="5"
-            onchange="updateBudgetDefault(this.value)" />
+          <input type="number" class="budget-input" id="budget-default-input" value="${currentDefault}" min="0" step="5"
+            oninput="previewBudgetDefault(this.value)" />
         </div>
-        <div class="budget-per-person">$${defPerPerson}/person</div>
+        <div class="budget-per-person" id="budget-default-pp">$${defPerPerson}/person</div>
         <div style="width:24px"></div>
       </div>
       <div class="budget-divider"></div>`;
@@ -1792,8 +1803,8 @@
           </div>
           <div class="budget-row-input-wrap">
             <span class="budget-dollar">$</span>
-            <input type="number" class="budget-input ${hasOverride ? '' : 'budget-input-default'}" value="${val}" min="0" step="5"
-              data-month="${k}" onchange="updateBudget('${k}', this.value)"
+            <input type="number" class="budget-input budget-month-input ${hasOverride ? '' : 'budget-input-default'}" value="${val}" min="0" step="5"
+              data-month="${k}"
               ${isCurrent && totalDeductedAll() > 0 ? 'disabled title="Cannot change — month in progress"' : ''}
               placeholder="${currentDefault}" />
           </div>
@@ -1805,34 +1816,42 @@
     el.innerHTML = html;
   }
 
-  function updateBudgetDefault(value) {
+  // Live preview: update per-person text as the default input changes (no save yet)
+  function previewBudgetDefault(value) {
     const val = parseFloat(value);
     if (isNaN(val) || val < 0) return;
-    if (!state.budgets) state.budgets = {};
-    state.budgets['default'] = val;
-    save();
-    if (fbDb) { try { fbDb.ref('/swearjar/gameState/budgets').set(state.budgets); } catch(e) {} }
-    renderBudgetList();
-    render();
-    toast(`Default budget set to $${val}`);
+    const pp = KIDS.length > 0 ? (val / KIDS.length).toFixed(2) : val.toFixed(2);
+    const ppEl = document.getElementById('budget-default-pp');
+    if (ppEl) ppEl.textContent = `$${pp}/person`;
   }
 
-  function updateBudget(monthKey, value) {
-    const val = parseFloat(value);
-    if (isNaN(val) || val < 0) return;
-    const currentDefault = state.budgets?.['default'] ?? getDefaultBudget();
+  // Read all budget inputs and save to state — called by "Save Changes"
+  function saveBudgetsFromForm() {
     if (!state.budgets) state.budgets = {};
-    // If the value matches the default, remove the override instead of storing it
-    if (val === currentDefault) {
-      delete state.budgets[monthKey];
-    } else {
-      state.budgets[monthKey] = val;
+    // Read the default input
+    const defInput = document.getElementById('budget-default-input');
+    if (defInput) {
+      const defVal = parseFloat(defInput.value);
+      if (!isNaN(defVal) && defVal >= 0) {
+        state.budgets['default'] = defVal;
+      }
     }
-    save();
+    const currentDefault = state.budgets['default'] ?? getDefaultBudget();
+    // Read each month input
+    document.querySelectorAll('.budget-month-input').forEach(inp => {
+      const monthKey = inp.dataset.month;
+      if (!monthKey || inp.disabled) return;
+      const val = parseFloat(inp.value);
+      if (isNaN(val) || val < 0) return;
+      // Only store as override if it differs from the default
+      if (val === currentDefault) {
+        delete state.budgets[monthKey];
+      } else {
+        state.budgets[monthKey] = val;
+      }
+    });
+    // Persist budgets to Firebase
     if (fbDb) { try { fbDb.ref('/swearjar/gameState/budgets').set(state.budgets); } catch(e) {} }
-    renderBudgetList();
-    render();
-    toast(`Budget for ${formatMonthKey(monthKey)} set to $${val}`);
   }
 
   function removeBudget(monthKey) {
@@ -1867,9 +1886,13 @@
     EMOJI    =Object.fromEntries(settings.map((s,i)=>[s.name,SLOT_EMOJI[i]??'🧒']));
     PAY_INFO =Object.fromEntries(settings.map(s=>[s.name,s.paymentInfo??'']));
     AVATARS  =Object.fromEntries(settings.map(s=>[s.name,s.avatar??'']));
-    const ns={kids:{},history:state.history,monthlyResults:state.monthlyResults,currentMonth:state.currentMonth};
+    const ns={kids:{},history:state.history,monthlyResults:state.monthlyResults,currentMonth:state.currentMonth,budgets:state.budgets||{}};
     KIDS.forEach((name,i)=>{const on=oldKids[i];ns.kids[name]=(on&&state.kids[on])?state.kids[on]:(state.kids[name]??{deducted:0,swears:0,penalty:0});});
     state=ns;
+    // Save budgets from admin form
+    if (currentUser === 'admin') {
+      saveBudgetsFromForm();
+    }
     // Save Alexa Skill ID if admin
     if (currentUser === 'admin') {
       const skillInp = document.getElementById('alexa-skill-id-input');
