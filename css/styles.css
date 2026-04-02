@@ -125,7 +125,8 @@
     .pot-sub    { font-size: 11px; opacity: .65; margin-top: 2px; }
     .pot-right  { text-align: right; }
     .pot-leader-label { font-size: 10px; opacity: .75; text-transform: uppercase; letter-spacing: 1px; }
-    .pot-leader-name  { font-size: 14px; font-weight: 800; margin-top: 2px; }
+    .pot-leader-name  { font-size: 14px; font-weight: 800; margin-top: 2px; display: flex; flex-direction: column; gap: 1px; }
+    .pot-leader-amount { font-size: 11px; font-weight: 600; opacity: .75; }
     .days-left-bar {
       display: flex; align-items: center; justify-content: space-between; gap: 10px;
       background: var(--surface2); border-radius: 12px; padding: 8px 14px; margin-top: 8px;
