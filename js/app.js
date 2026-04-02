@@ -884,6 +884,27 @@
     }
   }
 
+  function markLoserPaid(monthKey, payerName) {
+    const monthResult = state.monthlyResults.find(r => r.month === monthKey);
+    if (!monthResult || !monthResult.payments || !monthResult.payments[payerName]) {
+      toast('⚠️ Payment record not found');
+      return;
+    }
+    monthResult.payments[payerName].paid = true;
+    monthResult.payments[payerName].paidAt = new Date().toISOString();
+    monthResult.payments[payerName].paidBy = currentUser;
+    save();
+    toast(`✅ ${payerName} marked as paid!`);
+    // Refresh announcement
+    const announceOverlay = document.getElementById('announce-overlay');
+    if (announceOverlay && !announceOverlay.classList.contains('hidden')) {
+      showWinnerAnnouncement(monthResult);
+    }
+    // Refresh history if visible
+    const activeTab = document.querySelector('.nav-tab.active')?.id?.replace('tab-','');
+    if (activeTab === 'history') renderHistory();
+  }
+
   // ══════════════════════════════════════════════════════
   //  CONSTANTS
   // ══════════════════════════════════════════════════════
@@ -1072,7 +1093,25 @@
       if (rem < 0) overflows[kid] = Math.abs(rem);
     });
 
-    const result = { month, winners, budget, allocation: alloc, winnerPrize, kids: kidsSnapshot };
+    // Build payment records: each non-winner owes their lost amount
+    const payments = {};
+    KIDS.forEach(kid => {
+      if (winners.includes(kid)) return;
+      const rem = getKidRemaining(kid);
+      const lost = Math.max(0, alloc - Math.max(0, rem));
+      if (lost > 0) {
+        const s = settings.find(x => x.name === kid);
+        payments[kid] = {
+          amount: Math.round(lost * 100) / 100,
+          paid: false,
+          paidAt: null,
+          paymentType: s?.paymentType ?? '',
+          paymentInfo: (s?.paymentInfo ?? '').trim(),
+        };
+      }
+    });
+
+    const result = { month, winners, budget, allocation: alloc, winnerPrize, kids: kidsSnapshot, payments };
 
     state.monthlyResults.unshift(result);
 
@@ -1122,7 +1161,67 @@
           </div>`).join('')}
       </div>`;
 
-    document.getElementById('announce-requests').innerHTML = '';
+    // Payment section — one-tap pay buttons for each loser
+    const payments = result.payments || {};
+    const loserNames = Object.keys(payments).filter(k => payments[k].amount > 0);
+    const winnerInfo = winners.map(w => {
+      const s = settings.find(x => x.name === w);
+      return { name: w, type: s?.paymentType ?? '', info: (s?.paymentInfo ?? '').trim() };
+    }).filter(x => x.info);
+    const winnerName = winners[0] || '';
+    const note = `Swear Jar – ${formatMonthKey(month)}`;
+
+    if (loserNames.length > 0 && winnerInfo.length > 0) {
+      const wi = winnerInfo[0]; // primary winner payment info
+      const paidCount = loserNames.filter(k => payments[k].paid).length;
+      const totalOwed = loserNames.reduce((s,k) => s + payments[k].amount, 0);
+
+      document.getElementById('announce-requests').innerHTML = `
+        <div style="text-align:left;margin-top:16px">
+          <div style="background:rgba(124,77,255,.1);border:1px solid rgba(124,77,255,.2);border-radius:14px;padding:12px;margin-bottom:12px">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--purple);margin-bottom:6px">💰 Payment Status</div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+              <div style="flex:1;height:6px;background:var(--surface2);border-radius:6px;overflow:hidden">
+                <div style="height:100%;background:linear-gradient(90deg,#00c851,#00e676);width:${loserNames.length>0?(paidCount/loserNames.length*100):0}%;transition:width .3s"></div>
+              </div>
+              <span style="font-size:13px;font-weight:700">${paidCount}/${loserNames.length}</span>
+            </div>
+            <div style="font-size:12px;color:var(--muted)">${paidCount === loserNames.length ? '🎉 All paid!' : `$${(totalOwed - loserNames.filter(k=>payments[k].paid).reduce((s,k)=>s+payments[k].amount,0)).toFixed(2)} outstanding`}</div>
+          </div>
+
+          <div class="modal-requests" style="margin-bottom:0">
+            <div class="modal-req-label">📤 Pay ${escHtml(winnerName)}</div>
+            <div class="modal-req-sub">Each person's forfeited amount goes to the winner</div>
+            ${loserNames.map(name => {
+              const p = payments[name];
+              const payUrl = getRequestUrl(wi.type, wi.info, p.amount, note);
+              const directPayUrl = getPaymentUrl(wi.type, wi.info);
+              const isPaid = p.paid;
+              const paidStyle = isPaid ? 'opacity:0.5' : '';
+              const pt = PAYMENT_TYPES.find(t => t.id === wi.type);
+              return `
+              <div class="modal-req-row" style="${paidStyle}">
+                <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
+                  <span style="font-size:18px;flex-shrink:0">${isPaid ? '✅' : (AVATARS[name] ? `<img src="${AVATARS[name]}" style="width:28px;height:28px;border-radius:50%;object-fit:cover" />` : (pt?.icon ?? '💳'))}</span>
+                  <div style="min-width:0">
+                    <div style="font-weight:700;color:${COLOR_HEX[name]}">${escHtml(name)}</div>
+                    <div style="font-size:11px;color:var(--muted)">${isPaid ? 'Paid ✓' : `owes $${p.amount.toFixed(2)} to ${escHtml(winnerName)}`}</div>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+                  <span style="font-size:15px;font-weight:800">$${p.amount.toFixed(2)}</span>
+                  ${isPaid ? '' : `
+                    ${payUrl ? `<a href="${payUrl}" target="_blank" rel="noopener" class="modal-req-btn" style="font-size:11px">${pt?.icon??'💳'} Pay Now</a>` : ''}
+                    <button class="modal-req-btn" style="font-size:11px;background:linear-gradient(135deg,#00c851,#00e676)" onclick="markLoserPaid('${month}','${escHtml(name)}')">✅ Paid</button>
+                  `}
+                </div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>`;
+    } else {
+      document.getElementById('announce-requests').innerHTML = '';
+    }
 
     overlay.classList.remove('hidden');
   }
@@ -1463,10 +1562,30 @@
       kidsSnapshot[kid] = { deducted: state.kids[kid]?.deducted??0, swears: state.kids[kid]?.swears??0, remaining: Math.max(0,rem), allocation: alloc };
       if (rem < 0) overflows[kid] = Math.abs(rem);
     });
-    state.monthlyResults.unshift({ month, winners, budget, allocation: alloc, winnerPrize: parseFloat(winnerPrize), kids: kidsSnapshot });
+    // Build payment records
+    const payments = {};
+    KIDS.forEach(kid => {
+      if (winners.includes(kid)) return;
+      const rem = getKidRemaining(kid);
+      const lost = Math.max(0, alloc - Math.max(0, rem));
+      if (lost > 0) {
+        const s = settings.find(x => x.name === kid);
+        payments[kid] = {
+          amount: Math.round(lost * 100) / 100,
+          paid: false,
+          paidAt: null,
+          paymentType: s?.paymentType ?? '',
+          paymentInfo: (s?.paymentInfo ?? '').trim(),
+        };
+      }
+    });
+    state.monthlyResults.unshift({ month, winners, budget, allocation: alloc, winnerPrize: parseFloat(winnerPrize), kids: kidsSnapshot, payments });
     KIDS.forEach(k=>{state.kids[k]={deducted:0,swears:0,penalty:overflows[k]||0};});
     state.history=[];
     save(); closeModal(); render(); switchView('tracker');
+    // Show the winner announcement with payment buttons
+    const latestResult = state.monthlyResults[0];
+    if (budget > 0) showWinnerAnnouncement(latestResult);
     toast(`${winners.join(' & ')} keep${winners.length>1?'':'s'} $${winnerPrize}! 🏆`);
   }
 
@@ -1621,6 +1740,9 @@
       const wColor=COLOR_HEX[(r.winners??[r.winner])[0]]??'#fff';
       const prize = r.winnerPrize ?? r.pot ?? 0;
       const prizeStr=r.winners?.length>1?`Each kept $${(prize/r.winners.length).toFixed(2)}`:`Kept $${prize.toFixed ? prize.toFixed(2) : prize}`;
+      const payments = r.payments || {};
+      const paymentNames = Object.keys(payments);
+      const paidCount = paymentNames.filter(k => payments[k]?.paid).length;
       return `
         <div class="hist-card">
           <div class="hist-month">${formatMonthKey(r.month)} · Budget: $${r.budget ?? '?'}</div>
@@ -1630,12 +1752,22 @@
             <div class="hist-prize">${prizeStr}</div>
           </div>
           <div class="hist-rows">
-            ${sorted.map(kid=>`
+            ${sorted.map(kid=>{
+              const isPaid = payments[kid]?.paid;
+              const owes = payments[kid]?.amount;
+              const isWinner = (r.winners??[]).includes(kid);
+              return `
               <div class="hist-row">
                 <div class="hist-row-left"><div class="hist-row-dot" style="background:${COLOR_HEX[kid]??'#888'}"></div><span class="hist-row-name" style="color:${COLOR_HEX[kid]??'#888'}">${escHtml(kid)}</span></div>
-                <div class="hist-row-amount">${r.kids[kid]?.swears??0} swears · $${(r.kids[kid]?.remaining??0).toFixed ? (r.kids[kid]?.remaining??0).toFixed(2) : r.kids[kid]?.remaining??0} remaining</div>
-              </div>`).join('')}
+                <div class="hist-row-amount">${r.kids[kid]?.swears??0} swears · $${(r.kids[kid]?.remaining??0).toFixed ? (r.kids[kid]?.remaining??0).toFixed(2) : r.kids[kid]?.remaining??0} left${isWinner ? ' 🏆' : owes ? (isPaid ? ' · ✅ Paid' : ` · owes $${owes.toFixed(2)}`) : ''}</div>
+              </div>`;
+            }).join('')}
           </div>
+          ${paymentNames.length > 0 ? `
+          <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:12px;color:var(--muted)">Payments: ${paidCount}/${paymentNames.length} ${paidCount===paymentNames.length ? '✅' : ''}</span>
+            ${paidCount < paymentNames.length ? `<button class="modal-req-btn" style="font-size:11px" onclick="showWinnerAnnouncement(state.monthlyResults.find(x=>x.month==='${r.month}'))">View Payments</button>` : ''}
+          </div>` : ''}
         </div>`;
     }).join('');
   }
