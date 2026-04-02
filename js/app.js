@@ -1769,10 +1769,10 @@
         </div>
         <div class="budget-row-input-wrap">
           <span class="budget-dollar">$</span>
-          <input type="number" class="budget-input" value="${currentDefault}" min="0" step="5"
-            onchange="updateBudgetDefault(this.value)" />
+          <input type="number" class="budget-input" id="budget-default-input" value="${currentDefault}" min="0" step="5"
+            oninput="previewBudgetDefault(this.value)" />
         </div>
-        <div class="budget-per-person">$${defPerPerson}/person</div>
+        <div class="budget-per-person" id="budget-default-pp">$${defPerPerson}/person</div>
         <div style="width:24px"></div>
       </div>
       <div class="budget-divider"></div>`;
@@ -1792,8 +1792,8 @@
           </div>
           <div class="budget-row-input-wrap">
             <span class="budget-dollar">$</span>
-            <input type="number" class="budget-input ${hasOverride ? '' : 'budget-input-default'}" value="${val}" min="0" step="5"
-              data-month="${k}" onchange="updateBudget('${k}', this.value)"
+            <input type="number" class="budget-input budget-month-input ${hasOverride ? '' : 'budget-input-default'}" value="${val}" min="0" step="5"
+              data-month="${k}"
               ${isCurrent && totalDeductedAll() > 0 ? 'disabled title="Cannot change — month in progress"' : ''}
               placeholder="${currentDefault}" />
           </div>
@@ -1805,34 +1805,42 @@
     el.innerHTML = html;
   }
 
-  function updateBudgetDefault(value) {
+  // Live preview: update per-person text as the default input changes (no save yet)
+  function previewBudgetDefault(value) {
     const val = parseFloat(value);
     if (isNaN(val) || val < 0) return;
-    if (!state.budgets) state.budgets = {};
-    state.budgets['default'] = val;
-    save();
-    if (fbDb) { try { fbDb.ref('/swearjar/gameState/budgets').set(state.budgets); } catch(e) {} }
-    renderBudgetList();
-    render();
-    toast(`Default budget set to $${val}`);
+    const pp = KIDS.length > 0 ? (val / KIDS.length).toFixed(2) : val.toFixed(2);
+    const ppEl = document.getElementById('budget-default-pp');
+    if (ppEl) ppEl.textContent = `$${pp}/person`;
   }
 
-  function updateBudget(monthKey, value) {
-    const val = parseFloat(value);
-    if (isNaN(val) || val < 0) return;
-    const currentDefault = state.budgets?.['default'] ?? getDefaultBudget();
+  // Read all budget inputs and save to state — called by "Save Changes"
+  function saveBudgetsFromForm() {
     if (!state.budgets) state.budgets = {};
-    // If the value matches the default, remove the override instead of storing it
-    if (val === currentDefault) {
-      delete state.budgets[monthKey];
-    } else {
-      state.budgets[monthKey] = val;
+    // Read the default input
+    const defInput = document.getElementById('budget-default-input');
+    if (defInput) {
+      const defVal = parseFloat(defInput.value);
+      if (!isNaN(defVal) && defVal >= 0) {
+        state.budgets['default'] = defVal;
+      }
     }
-    save();
+    const currentDefault = state.budgets['default'] ?? getDefaultBudget();
+    // Read each month input
+    document.querySelectorAll('.budget-month-input').forEach(inp => {
+      const monthKey = inp.dataset.month;
+      if (!monthKey || inp.disabled) return;
+      const val = parseFloat(inp.value);
+      if (isNaN(val) || val < 0) return;
+      // Only store as override if it differs from the default
+      if (val === currentDefault) {
+        delete state.budgets[monthKey];
+      } else {
+        state.budgets[monthKey] = val;
+      }
+    });
+    // Persist budgets to Firebase
     if (fbDb) { try { fbDb.ref('/swearjar/gameState/budgets').set(state.budgets); } catch(e) {} }
-    renderBudgetList();
-    render();
-    toast(`Budget for ${formatMonthKey(monthKey)} set to $${val}`);
   }
 
   function removeBudget(monthKey) {
@@ -1867,9 +1875,13 @@
     EMOJI    =Object.fromEntries(settings.map((s,i)=>[s.name,SLOT_EMOJI[i]??'🧒']));
     PAY_INFO =Object.fromEntries(settings.map(s=>[s.name,s.paymentInfo??'']));
     AVATARS  =Object.fromEntries(settings.map(s=>[s.name,s.avatar??'']));
-    const ns={kids:{},history:state.history,monthlyResults:state.monthlyResults,currentMonth:state.currentMonth};
+    const ns={kids:{},history:state.history,monthlyResults:state.monthlyResults,currentMonth:state.currentMonth,budgets:state.budgets||{}};
     KIDS.forEach((name,i)=>{const on=oldKids[i];ns.kids[name]=(on&&state.kids[on])?state.kids[on]:(state.kids[name]??{deducted:0,swears:0,penalty:0});});
     state=ns;
+    // Save budgets from admin form
+    if (currentUser === 'admin') {
+      saveBudgetsFromForm();
+    }
     // Save Alexa Skill ID if admin
     if (currentUser === 'admin') {
       const skillInp = document.getElementById('alexa-skill-id-input');
