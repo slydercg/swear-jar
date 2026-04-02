@@ -13,7 +13,7 @@ const CHARGE_CATEGORIES = [
 ];
 
 const CHARGE_AMOUNT = 1;
-const DEFAULT_MONTHLY_POT = 100;
+const DEFAULT_PER_PERSON = 10;
 
 const STREAK_MILESTONES = [
   { days: 3,  badge: '🌱', label: 'Sprout' },
@@ -29,16 +29,16 @@ const MONTHS = ['January','February','March','April','May','June','July','August
 
 /**
  * Get the budget for a given month key from the budgets config.
- * Falls back to DEFAULT_MONTHLY_POT if no budget is set.
+ * Falls back to DEFAULT_PER_PERSON * numKids if no budget is set.
  * @param {Object} budgets - { 'YYYY-MM': number, ... }
  * @param {string} monthKey - 'YYYY-MM'
+ * @param {number} numKids - Number of participants (for default calculation)
  * @returns {number}
  */
-function getMonthlyBudget(budgets, monthKey) {
+function getMonthlyBudget(budgets, monthKey, numKids) {
   if (budgets && budgets[monthKey] !== undefined) return budgets[monthKey];
-  // Check for a default key
   if (budgets && budgets['default'] !== undefined) return budgets['default'];
-  return DEFAULT_MONTHLY_POT;
+  return DEFAULT_PER_PERSON * (numKids || 1);
 }
 
 /**
@@ -256,7 +256,7 @@ if (typeof module !== 'undefined' && module.exports) {
   module.exports = {
     CHARGE_CATEGORIES,
     CHARGE_AMOUNT,
-    DEFAULT_MONTHLY_POT,
+    DEFAULT_PER_PERSON,
     STREAK_MILESTONES,
     MONTHS,
     getMonthlyBudget,
