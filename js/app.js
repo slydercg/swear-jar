@@ -1433,14 +1433,23 @@
     const potRemaining = totalPotRemaining();
     const winners = getWinners(), worst = getWorst();
     document.getElementById('month-chip').textContent = formatMonthKey(currentMonthKey());
-    document.getElementById('pot-amount').textContent = `$${potRemaining.toFixed(2)}`;
-    document.getElementById('pot-leader').textContent = totalDeductedAll() > 0 ? winners.join(' & ') : '—';
-    // Update pot label to show remaining / total
-    const potLabelEl = document.getElementById('pot-label');
-    if (potLabelEl) potLabelEl.textContent = `💰 Remaining of $${budget.toFixed(2)}`;
+    document.getElementById('pot-amount').textContent = `$${budget.toFixed(0)}`;
     // Show per-person breakdown
+    const potLabelEl = document.getElementById('pot-label');
+    if (potLabelEl) potLabelEl.textContent = `💰 Month's Pot`;
     const potSubEl = document.getElementById('pot-sub');
     if (potSubEl) potSubEl.textContent = `${KIDS.length} participants · $${alloc.toFixed(2)} each`;
+    // Show who's winning and their remaining amount
+    const potLeaderEl = document.getElementById('pot-leader');
+    if (totalDeductedAll() > 0 && winners.length > 0) {
+      const winnerRemaining = getKidRemaining(winners[0]);
+      const winnerNames = winners.length > 2
+        ? `${winners[0]} +${winners.length - 1} more`
+        : winners.join(' & ');
+      potLeaderEl.innerHTML = `<span>${escHtml(winnerNames)}</span><span class="pot-leader-amount">$${winnerRemaining.toFixed(2)} left</span>`;
+    } else {
+      potLeaderEl.textContent = '—';
+    }
     // Cleanest Mouth award
     const cleanest = getCleanestMouth();
     const cleanEl = document.getElementById('cleanest-mouth');
