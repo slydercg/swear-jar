@@ -245,7 +245,8 @@
             kids: raw.kids || {},
             history: fbToArray(raw.history),
             monthlyResults: fbToArray(raw.monthlyResults),
-            currentMonth: raw.currentMonth || ''
+            currentMonth: raw.currentMonth || '',
+            budgets: raw.budgets || {}
           };
           incoming.monthlyResults.forEach(r => {
             if (!r.winners && r.winner) { r.winners = [r.winner]; delete r.winner; }
@@ -1876,10 +1877,11 @@
             <span class="budget-dollar">$</span>
             <input type="number" class="budget-input budget-month-input ${hasOverride ? '' : 'budget-input-default'}" value="${val}" min="0" step="5"
               data-month="${k}"
+              oninput="previewBudgetMonth(this)"
               ${isCurrent && totalDeductedAll() > 0 ? 'disabled title="Cannot change — month in progress"' : ''}
               placeholder="${currentDefault}" />
           </div>
-          <div class="budget-per-person">$${perPerson}/person</div>
+          <div class="budget-per-person" id="budget-pp-${k.replace('-','_')}">$${perPerson}/person</div>
           ${hasOverride && !(isCurrent && totalDeductedAll() > 0) ? `<button class="budget-remove-btn" onclick="removeBudget('${k}')" title="Reset to default">↩</button>` : '<div style="width:24px"></div>'}
         </div>`;
     }).join('');
@@ -1887,7 +1889,7 @@
     el.innerHTML = html;
   }
 
-  // Live preview: update per-person text as the default input changes (no save yet)
+  // Live preview: update per-person text as the default input changes
   function previewBudgetDefault(value) {
     const val = parseFloat(value);
     if (isNaN(val) || val < 0) return;
@@ -1896,9 +1898,24 @@
     if (ppEl) ppEl.textContent = `$${pp}/person`;
   }
 
+  // Live preview: update per-person text as a month input changes
+  function previewBudgetMonth(inp) {
+    const val = parseFloat(inp.value);
+    if (isNaN(val) || val < 0) return;
+    const pp = KIDS.length > 0 ? (val / KIDS.length).toFixed(2) : val.toFixed(2);
+    const monthKey = inp.dataset.month;
+    if (monthKey) {
+      const ppEl = document.getElementById('budget-pp-' + monthKey.replace('-','_'));
+      if (ppEl) ppEl.textContent = `$${pp}/person`;
+    }
+    // Mark as edited (visual feedback)
+    inp.classList.remove('budget-input-default');
+  }
+
   // Read all budget inputs and save to state — called by "Save Changes"
   function saveBudgetsFromForm() {
     if (!state.budgets) state.budgets = {};
+
     // Read the default input
     const defInput = document.getElementById('budget-default-input');
     if (defInput) {
@@ -1908,6 +1925,7 @@
       }
     }
     const currentDefault = state.budgets['default'] ?? getDefaultBudget();
+
     // Read each month input
     document.querySelectorAll('.budget-month-input').forEach(inp => {
       const monthKey = inp.dataset.month;
@@ -1921,6 +1939,7 @@
         state.budgets[monthKey] = val;
       }
     });
+
     // Persist budgets to Firebase
     if (fbDb) { try { fbDb.ref('/swearjar/gameState/budgets').set(state.budgets); } catch(e) {} }
   }
