@@ -98,10 +98,17 @@
     </div>
   </div>
 
-  <!-- ═══════════ HISTORY ═══════════ -->
+  <!-- ═══════════ WINNERS (replaces History) ═══════════ -->
   <div class="view" id="view-history">
-    <div class="header"><div class="header-row-bare"><div class="app-title">🏅 History</div></div></div>
-    <div class="history-list" id="history-list"></div>
+    <div class="header"><div class="header-row-bare"><div class="app-title">🏆 Winners</div></div></div>
+    <div class="winners-inner">
+      <div class="report-month-nav" id="winners-nav" style="display:none">
+        <button class="report-month-btn" id="win-prev" onclick="winnersMonthStep(1)">‹</button>
+        <div class="report-month-label" id="win-month-label">—</div>
+        <button class="report-month-btn" id="win-next" onclick="winnersMonthStep(-1)">›</button>
+      </div>
+      <div id="winners-content"></div>
+    </div>
   </div>
 
   <!-- ═══════════ REPORTS ═══════════ -->
@@ -241,7 +248,7 @@
   <!-- ═══════════ BOTTOM NAV ═══════════ -->
   <div class="bottom-nav">
     <button class="nav-tab active" id="tab-tracker"  onclick="switchView('tracker')"><span class="nav-icon">🎯</span><span>Tracker</span></button>
-    <button class="nav-tab"        id="tab-history"  onclick="switchView('history')"><span class="nav-icon">🏅</span><span>History</span></button>
+    <button class="nav-tab"        id="tab-history"  onclick="switchView('history')"><span class="nav-icon">🏆</span><span>Winners</span></button>
     <button class="nav-tab"        id="tab-reports"  onclick="switchView('reports')"><span class="nav-icon">📈</span><span>Reports</span></button>
     <button class="nav-tab"        id="tab-settings" onclick="switchView('settings')"><span class="nav-icon">⚙️</span><span>Settings</span></button>
   </div>

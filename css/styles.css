@@ -232,7 +232,32 @@
     .empty      { text-align: center; padding: 28px 0; color: var(--muted); }
     .empty-icon { font-size: 38px; margin-bottom: 8px; }
 
-    /* ════════ HISTORY ════════ */
+    /* ════════ WINNERS / HISTORY ════════ */
+    .winners-inner { padding: 14px; display: flex; flex-direction: column; gap: 14px; }
+    .winners-card {
+      background: var(--surface); border-radius: 24px; padding: 24px 18px;
+      text-align: center; border: 1px solid var(--border);
+    }
+    .winners-month-badge {
+      display: inline-block; padding: 4px 14px; border-radius: 20px;
+      background: rgba(124,77,255,.12); border: 1px solid rgba(124,77,255,.25);
+      font-size: 11px; font-weight: 700; color: var(--purple);
+      text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 14px;
+    }
+    .winners-trophy { font-size: 56px; line-height: 1; margin-bottom: 6px; }
+    .winners-headline { font-size: 10px; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin-bottom: 4px; }
+    .winners-name { font-size: 28px; font-weight: 900; margin-bottom: 4px; }
+    .winners-prize { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 18px; }
+    .winners-leaderboard { text-align: left; margin-bottom: 14px; }
+    .winners-lb-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 12px; border-radius: 12px; margin-bottom: 6px;
+      background: var(--surface2);
+    }
+    .winners-lb-row.winner-row { background: rgba(124,77,255,.1); border: 1px solid rgba(124,77,255,.18); }
+    .winners-empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+    .winners-empty-icon { font-size: 48px; margin-bottom: 12px; }
+
     .history-list { padding: 14px; display: flex; flex-direction: column; gap: 14px; }
     .hist-card        { background: var(--surface); border-radius: 20px; padding: 18px; }
     .hist-month       { font-size: 13px; color: var(--muted); font-weight: 600; margin-bottom: 12px; }
