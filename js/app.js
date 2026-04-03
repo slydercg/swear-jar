@@ -1727,49 +1727,130 @@
   // ══════════════════════════════════════════════════════
   //  RENDER — HISTORY
   // ══════════════════════════════════════════════════════
+  // ── Winners tab: month-by-month full announcement view ──
+  let winnersMonthIndex = 0;
+
+  function winnersMonthStep(dir) {
+    winnersMonthIndex = Math.max(0, Math.min(state.monthlyResults.length - 1, winnersMonthIndex + dir));
+    renderHistory();
+  }
+
   function renderHistory() {
-    const el=document.getElementById('history-list');
+    const nav = document.getElementById('winners-nav');
+    const el = document.getElementById('winners-content');
     if (!state.monthlyResults.length) {
-      el.innerHTML=`<div class="empty" style="padding:40px 0"><div class="empty-icon">📋</div><div>No months completed yet</div><div style="font-size:13px;margin-top:6px;color:var(--muted)">End a month to see results here</div></div>`;
+      if (nav) nav.style.display = 'none';
+      el.innerHTML = `<div class="winners-empty"><div class="winners-empty-icon">🏆</div><div style="font-size:17px;font-weight:700;margin-bottom:6px">No winners yet</div><div style="font-size:13px">Complete a month to see results here</div></div>`;
       return;
     }
-    el.innerHTML=state.monthlyResults.map(r=>{
-      const allKids=Object.keys(r.kids);
-      const sorted=[...allKids].sort((a,b)=>(r.kids[b]?.remaining??0)-(r.kids[a]?.remaining??0));
-      const wNames=(r.winners??[r.winner]).join(' & ');
-      const wColor=COLOR_HEX[(r.winners??[r.winner])[0]]??'#fff';
-      const prize = r.winnerPrize ?? r.pot ?? 0;
-      const prizeStr=r.winners?.length>1?`Each kept $${(prize/r.winners.length).toFixed(2)}`:`Kept $${prize.toFixed ? prize.toFixed(2) : prize}`;
-      const payments = r.payments || {};
-      const paymentNames = Object.keys(payments);
-      const paidCount = paymentNames.filter(k => payments[k]?.paid).length;
-      return `
-        <div class="hist-card">
-          <div class="hist-month">${formatMonthKey(r.month)} · Budget: $${r.budget ?? '?'}</div>
-          <div class="hist-winner-box">
-            <div class="hist-trophy">🏆</div>
-            <div class="hist-winner-name" style="color:${wColor}">${wNames}</div>
-            <div class="hist-prize">${prizeStr}</div>
+
+    // Show nav and clamp index
+    if (nav) nav.style.display = '';
+    const max = state.monthlyResults.length;
+    winnersMonthIndex = Math.max(0, Math.min(max - 1, winnersMonthIndex));
+    document.getElementById('win-prev').disabled = (winnersMonthIndex >= max - 1);
+    document.getElementById('win-next').disabled = (winnersMonthIndex <= 0);
+
+    const r = state.monthlyResults[winnersMonthIndex];
+    document.getElementById('win-month-label').textContent = formatMonthKey(r.month);
+
+    // Build the full announcement card inline
+    const winners = r.winners ?? [r.winner];
+    const allKids = Object.keys(r.kids);
+    const sorted = [...allKids].sort((a,b) => (r.kids[b]?.remaining??0) - (r.kids[a]?.remaining??0));
+    const wColor = COLOR_HEX[winners[0]] ?? 'var(--text)';
+    const prize = r.winnerPrize ?? r.pot ?? 0;
+    const prizeStr = winners.length > 1
+      ? `Each kept $${(prize / winners.length).toFixed(2)}`
+      : `Kept $${prize.toFixed ? prize.toFixed(2) : prize}`;
+    const medals = ['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣'];
+
+    // Payment section
+    const payments = r.payments || {};
+    const loserNames = Object.keys(payments).filter(k => payments[k]?.amount > 0);
+    const winnerInfo = winners.map(w => {
+      const s = settings.find(x => x.name === w);
+      return { name: w, type: s?.paymentType ?? '', info: (s?.paymentInfo ?? '').trim() };
+    }).filter(x => x.info);
+    const winnerName = winners[0] || '';
+    const note = `Swear Jar – ${formatMonthKey(r.month)}`;
+
+    let paymentHtml = '';
+    if (loserNames.length > 0) {
+      const wi = winnerInfo.length > 0 ? winnerInfo[0] : null;
+      const paidCount = loserNames.filter(k => payments[k].paid).length;
+      const totalOwed = loserNames.reduce((s,k) => s + payments[k].amount, 0);
+      const outstanding = totalOwed - loserNames.filter(k=>payments[k].paid).reduce((s,k)=>s+payments[k].amount, 0);
+
+      paymentHtml = `
+        <div style="text-align:left;margin-top:16px">
+          <div style="background:rgba(124,77,255,.1);border:1px solid rgba(124,77,255,.2);border-radius:14px;padding:12px;margin-bottom:12px">
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--purple);margin-bottom:6px">💰 Payment Status</div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+              <div style="flex:1;height:6px;background:var(--surface2);border-radius:6px;overflow:hidden">
+                <div style="height:100%;background:linear-gradient(90deg,#00c851,#00e676);width:${loserNames.length>0?(paidCount/loserNames.length*100):0}%;transition:width .3s"></div>
+              </div>
+              <span style="font-size:13px;font-weight:700">${paidCount}/${loserNames.length}</span>
+            </div>
+            <div style="font-size:12px;color:var(--muted)">${paidCount === loserNames.length ? '🎉 All paid!' : `$${outstanding.toFixed(2)} outstanding`}</div>
           </div>
-          <div class="hist-rows">
-            ${sorted.map(kid=>{
-              const isPaid = payments[kid]?.paid;
-              const owes = payments[kid]?.amount;
-              const isWinner = (r.winners??[]).includes(kid);
+
+          <div class="modal-requests" style="margin-bottom:0">
+            <div class="modal-req-label">📤 Pay ${escHtml(winnerName)}</div>
+            ${loserNames.map(name => {
+              const p = payments[name];
+              const payUrl = wi ? getRequestUrl(wi.type, wi.info, p.amount, note) : null;
+              const isPaid = p.paid;
+              const paidStyle = isPaid ? 'opacity:0.5' : '';
+              const pt = wi ? PAYMENT_TYPES.find(t => t.id === wi.type) : null;
               return `
-              <div class="hist-row">
-                <div class="hist-row-left"><div class="hist-row-dot" style="background:${COLOR_HEX[kid]??'#888'}"></div><span class="hist-row-name" style="color:${COLOR_HEX[kid]??'#888'}">${escHtml(kid)}</span></div>
-                <div class="hist-row-amount">${r.kids[kid]?.swears??0} swears · $${(r.kids[kid]?.remaining??0).toFixed ? (r.kids[kid]?.remaining??0).toFixed(2) : r.kids[kid]?.remaining??0} left${isWinner ? ' 🏆' : owes ? (isPaid ? ' · ✅ Paid' : ` · owes $${owes.toFixed(2)}`) : ''}</div>
+              <div class="modal-req-row" style="${paidStyle}">
+                <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
+                  <span style="font-size:18px;flex-shrink:0">${isPaid ? '✅' : (AVATARS[name] ? `<img src="${AVATARS[name]}" style="width:28px;height:28px;border-radius:50%;object-fit:cover" />` : (pt?.icon ?? '💳'))}</span>
+                  <div style="min-width:0">
+                    <div style="font-weight:700;color:${COLOR_HEX[name]}">${escHtml(name)}</div>
+                    <div style="font-size:11px;color:var(--muted)">${isPaid ? `Paid ✓${p.paidAt ? ' · '+relativeTime(p.paidAt) : ''}` : `owes $${p.amount.toFixed(2)}`}</div>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+                  <span style="font-size:15px;font-weight:800">$${p.amount.toFixed(2)}</span>
+                  ${isPaid ? '' : `
+                    ${payUrl ? `<a href="${payUrl}" target="_blank" rel="noopener" class="modal-req-btn" style="font-size:11px">${pt?.icon??'💳'} Pay</a>` : ''}
+                    <button class="modal-req-btn" style="font-size:11px;background:linear-gradient(135deg,#00c851,#00e676)" onclick="markLoserPaid('${r.month}','${escHtml(name)}');renderHistory()">✅ Paid</button>
+                  `}
+                </div>
               </div>`;
             }).join('')}
           </div>
-          ${paymentNames.length > 0 ? `
-          <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
-            <span style="font-size:12px;color:var(--muted)">Payments: ${paidCount}/${paymentNames.length} ${paidCount===paymentNames.length ? '✅' : ''}</span>
-            ${paidCount < paymentNames.length ? `<button class="modal-req-btn" style="font-size:11px" onclick="showWinnerAnnouncement(state.monthlyResults.find(x=>x.month==='${r.month}'))">View Payments</button>` : ''}
-          </div>` : ''}
         </div>`;
-    }).join('');
+    }
+
+    el.innerHTML = `
+      <div class="winners-card">
+        <div class="winners-month-badge">${formatMonthKey(r.month)} · Budget $${r.budget ?? '?'}</div>
+        <div class="winners-trophy">${winners.length > 1 ? '🤝' : '🏆'}</div>
+        <div class="winners-headline">Month's Winner</div>
+        <div class="winners-name" style="color:${wColor}">${winners.join(' & ')}</div>
+        <div class="winners-prize">${prizeStr}</div>
+
+        <div class="winners-leaderboard">
+          ${sorted.map((kid,i) => `
+            <div class="winners-lb-row ${winners.includes(kid) ? 'winner-row' : ''}">
+              <div style="display:flex;align-items:center;gap:10px">
+                <span>${medals[i]??'•'}</span>
+                ${AVATARS[kid] ? `<img src="${AVATARS[kid]}" style="width:24px;height:24px;border-radius:50%;object-fit:cover" />` : ''}
+                <span style="font-weight:700;color:${COLOR_HEX[kid]}">${escHtml(kid)}</span>
+              </div>
+              <span style="color:var(--muted);font-size:13px">${r.kids[kid]?.swears??0} swear${(r.kids[kid]?.swears??0)!==1?'s':''} · $${(r.kids[kid]?.remaining??0).toFixed(2)} left</span>
+            </div>`).join('')}
+        </div>
+
+        ${paymentHtml}
+      </div>
+
+      <div style="text-align:center;padding:8px 0;font-size:12px;color:var(--muted)">
+        ${winnersMonthIndex + 1} of ${max} month${max!==1?'s':''}
+      </div>`;
   }
 
   // ══════════════════════════════════════════════════════
