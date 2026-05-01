@@ -83,7 +83,7 @@ We may update this policy periodically. Changes will be posted within the App an
 ## Contact
 
 For privacy concerns or data deletion requests, contact:
-- Email: privacy@slyderswearjar.com
+- Email: privacy@swearjarapp.com
 - GitHub: https://github.com/slydercg/swear-jar/issues
 
 ## Jurisdiction
