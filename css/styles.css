@@ -237,6 +237,13 @@
     .activity-badge { font-size: 12px; font-weight: 700; background: rgba(233,30,140,.15); color: var(--pink); border-radius: 8px; padding: 2px 8px; }
     .empty      { text-align: center; padding: 28px 0; color: var(--muted); }
     .empty-icon { font-size: 38px; margin-bottom: 8px; }
+    .btn-show-more {
+      display: block; width: 100%; padding: 12px; margin-top: 8px;
+      border: 1.5px solid var(--border); border-radius: 12px;
+      background: none; color: var(--purple); font-size: 13px; font-weight: 600;
+      cursor: pointer; -webkit-appearance: none;
+    }
+    .btn-show-more:active { background: var(--surface2); }
 
     /* ════════ WINNERS / HISTORY ════════ */
     .winners-inner { padding: 14px; display: flex; flex-direction: column; gap: 14px; }

@@ -9,19 +9,23 @@
         ".write": "auth != null",
         "kids": {
           "$kidName": {
-            ".validate": "newData.hasChildren(['deducted', 'swears'])",
-            "deducted": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000" },
-            "swears":   { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000" },
-            "penalty":  { ".validate": "newData.isNumber() && newData.val() >= 0" }
+            ".validate": "$kidName.length > 0 && $kidName.length <= 20 && newData.hasChildren(['deducted', 'swears'])",
+            "deducted": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000" },
+            "swears":   { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000" },
+            "penalty":  { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000" }
           }
         },
         "history": {
           "$idx": {
-            ".validate": "newData.hasChild('ts')",
-            "amount": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100" }
+            ".validate": "newData.hasChild('ts') && newData.hasChild('kid')",
+            "ts":     { ".validate": "newData.isString() && newData.val().length >= 20 && newData.val().length <= 30" },
+            "kid":    { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 20" },
+            "amount": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10" },
+            "category": { ".validate": "newData.isString() && newData.val().length <= 10" },
+            "addedBy": { ".validate": "newData.isString() && newData.val().length <= 30" }
           }
         },
-        "currentMonth": { ".validate": "newData.isString() && newData.val().length == 7" },
+        "currentMonth": { ".validate": "newData.isString() && newData.val().matches(/^\\d{4}-\\d{2}$/)" },
         "budgets": {
           "$monthKey": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000" }
         }
@@ -33,13 +37,20 @@
         "$idx": {
           ".validate": "newData.hasChildren(['name', 'color'])",
           "name":  { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 20" },
-          "color": { ".validate": "newData.isString() && newData.val().length <= 10" }
+          "color": { ".validate": "newData.isString() && newData.val().length <= 10" },
+          "paymentInfo": { ".validate": "newData.isString() && newData.val().length <= 100" },
+          "paymentType": { ".validate": "newData.isString() && newData.val().length <= 15" },
+          "avatar": { ".validate": "newData.isString() && newData.val().length <= 50000" }
         }
       },
 
       "appUsers": {
         ".read": "auth != null",
-        ".write": "auth != null"
+        ".write": "auth != null",
+        "$idx": {
+          "name": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 30" },
+          "isParent": { ".validate": "newData.isBoolean()" }
+        }
       },
 
       "adminPin": {
@@ -50,7 +61,9 @@
 
       "adminSession": {
         ".read": "auth != null",
-        ".write": "auth != null"
+        ".write": "auth != null",
+        "token": { ".validate": "newData.isString() && newData.val().length == 64" },
+        "ts":    { ".validate": "newData.isString()" }
       },
 
       "potTheme": {

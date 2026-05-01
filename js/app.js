@@ -189,7 +189,7 @@
           await auth.signInAnonymously();
         }
       } catch(authErr) {
-        console.warn('Anonymous auth failed — Firebase rules may block access:', authErr.message);
+        console.warn('Auth setup incomplete');
       }
 
       // Connection health listener
@@ -296,7 +296,7 @@
 
       return true;
     } catch(e) {
-      console.error('Firebase init failed:', e);
+      console.warn('Database connection failed');
       _fbInitialized = false; // allow retry
       fbFirstLoadDone = true;
       clearTimeout(_fbSyncTimeout);
@@ -310,7 +310,7 @@
   function fbSave()              { if (!fbDb) return; try { fbDb.ref('/swearjar/gameState').set(state); } catch(e) {} }
   function fbTransaction(path, updateFn) {
     if (!fbDb) return Promise.resolve();
-    return fbDb.ref(path).transaction(updateFn).catch(e => console.warn('Transaction failed:', e.message));
+    return fbDb.ref(path).transaction(updateFn).catch(() => {});
   }
   function fbSaveSettings(s)     { if (!fbDb) return; try { fbDb.ref('/swearjar/jarSettings').set(s); } catch(e) {} }
   function fbSaveUsers(u)        { if (!fbDb) return; try { fbDb.ref('/swearjar/appUsers').set(u); } catch(e) {} }
@@ -1372,26 +1372,29 @@
     const file = fileInput.files[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) { toast('⚠️ Please select an image file'); return; }
-    if (file.size > 5 * 1024 * 1024) { toast('⚠️ Image must be under 5MB'); return; }
+    if (file.size > 2 * 1024 * 1024) { toast('⚠️ Image must be under 2MB'); return; }
 
     const reader = new FileReader();
     reader.onload = function(e) {
       const img = new Image();
       img.onload = function() {
-        // Resize to 200x200 square (center crop)
         const canvas = document.createElement('canvas');
-        const size = 200;
+        const size = 100;
         canvas.width = size;
         canvas.height = size;
         const ctx = canvas.getContext('2d');
 
-        // Center crop: use the smaller dimension
         const srcSize = Math.min(img.width, img.height);
         const sx = (img.width - srcSize) / 2;
         const sy = (img.height - srcSize) / 2;
         ctx.drawImage(img, sx, sy, srcSize, srcSize, 0, 0, size, size);
 
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+        // Reject if compressed result is still too large (>30KB)
+        if (dataUrl.length > 40000) {
+          toast('⚠️ Image too complex — try a simpler photo');
+          return;
+        }
         settings[idx].avatar = dataUrl;
 
         // Update the preview immediately
@@ -1773,7 +1776,7 @@
               </div>`}
         </div>`;
     }).join('');
-    const recent=state.history.slice(0,20), actEl=document.getElementById('activity-list');
+    const recent=state.history.slice(0,_activityShown), actEl=document.getElementById('activity-list');
     if (!recent.length) {
       actEl.innerHTML=`<div class="empty"><div class="empty-icon">😇</div><div>No swears yet this month!</div></div>`;
     } else {
@@ -1819,6 +1822,9 @@
             </div>
           </div>`;
       }).join('');
+      if (state.history.length > _activityShown) {
+        actEl.insertAdjacentHTML('beforeend', `<button class="btn-show-more" onclick="showMoreActivity()">Show more (${state.history.length - _activityShown} remaining)</button>`);
+      }
     }
     updateRoleBasedUI();
   }
@@ -1826,6 +1832,20 @@
   // ══════════════════════════════════════════════════════
   //  RENDER — HISTORY
   // ══════════════════════════════════════════════════════
+  let _activityShown = 10;
+  function showMoreActivity() {
+    _activityShown += 10;
+    render();
+  }
+
+  // Debounce rapid renders (e.g. Firebase sync + local save firing together)
+  let _renderTimer = null;
+  const _origRender = render;
+  render = function() {
+    if (_renderTimer) clearTimeout(_renderTimer);
+    _renderTimer = setTimeout(_origRender, 16);
+  };
+
   // ── Winners tab: month-by-month full announcement view ──
   let winnersMonthIndex = 0;
 
