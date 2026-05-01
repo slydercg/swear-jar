@@ -2354,3 +2354,59 @@
 
   // Check for month rollover every 60s (catches devices left open overnight)
   setInterval(checkMonthRollover, 60000);
+
+  // ══════════════════════════════════════════════════════
+  //  PULL-TO-REFRESH (iOS-style)
+  // ══════════════════════════════════════════════════════
+  (function initPullToRefresh() {
+    const THRESHOLD = 80;
+    let startY = 0, pulling = false, pullDist = 0;
+
+    // Create the pull indicator element
+    const indicator = document.createElement('div');
+    indicator.className = 'ptr-indicator';
+    indicator.innerHTML = '<div class="ptr-spinner">↓</div>';
+    document.body.prepend(indicator);
+
+    document.addEventListener('touchstart', function(e) {
+      if (window.scrollY > 0) return;
+      startY = e.touches[0].clientY;
+      pulling = true;
+      pullDist = 0;
+    }, { passive: true });
+
+    document.addEventListener('touchmove', function(e) {
+      if (!pulling) return;
+      const y = e.touches[0].clientY;
+      pullDist = Math.max(0, y - startY);
+      if (pullDist > 0 && window.scrollY <= 0) {
+        const dist = Math.min(pullDist, THRESHOLD * 1.5);
+        const pct = Math.min(1, pullDist / THRESHOLD);
+        indicator.style.transform = `translateY(${dist * 0.5}px)`;
+        indicator.style.opacity = pct;
+        indicator.querySelector('.ptr-spinner').style.transform = `rotate(${pct * 180}deg)`;
+        if (pullDist >= THRESHOLD) {
+          indicator.classList.add('ptr-ready');
+          indicator.querySelector('.ptr-spinner').textContent = '↻';
+        } else {
+          indicator.classList.remove('ptr-ready');
+          indicator.querySelector('.ptr-spinner').textContent = '↓';
+        }
+      }
+    }, { passive: true });
+
+    document.addEventListener('touchend', function() {
+      if (!pulling) return;
+      if (pullDist >= THRESHOLD) {
+        indicator.classList.add('ptr-refreshing');
+        indicator.querySelector('.ptr-spinner').textContent = '↻';
+        indicator.style.transform = 'translateY(40px)';
+        setTimeout(() => window.location.reload(), 300);
+      } else {
+        indicator.style.transform = 'translateY(-50px)';
+        indicator.style.opacity = '0';
+      }
+      pulling = false;
+      pullDist = 0;
+    }, { passive: true });
+  })();
