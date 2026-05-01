@@ -251,6 +251,12 @@
           incoming.monthlyResults.forEach(r => {
             if (!r.winners && r.winner) { r.winners = [r.winner]; delete r.winner; }
           });
+          // Sanitize kid data — ensure numeric fields are numbers, not NaN/undefined
+          Object.values(incoming.kids).forEach(k => {
+            if (typeof k.deducted !== 'number' || isNaN(k.deducted)) k.deducted = 0;
+            if (typeof k.penalty !== 'number' || isNaN(k.penalty)) k.penalty = 0;
+            if (typeof k.swears !== 'number' || isNaN(k.swears)) k.swears = 0;
+          });
           // Check for new charges before overwriting state
           if (fbFirstLoadDone) checkForNewCharges(incoming.history);
           state = incoming;
@@ -1245,8 +1251,8 @@
   }
   function getKidRemaining(kid) {
     const alloc = getCurrentAllocation();
-    const deducted = state.kids[kid]?.deducted ?? 0;
-    const penalty = state.kids[kid]?.penalty ?? 0;
+    const deducted = parseFloat(state.kids[kid]?.deducted) || 0;
+    const penalty = parseFloat(state.kids[kid]?.penalty) || 0;
     return Math.round((alloc - deducted - penalty) * 100) / 100;
   }
   function totalDeductedAll() { return Object.values(state.kids).reduce((s,k)=>s+(k.deducted||0),0); }
@@ -1478,6 +1484,8 @@
       window.navigator.vibrate(10);
     }
     if (!state.kids[kid]) state.kids[kid] = { deducted:0, swears:0, penalty:0 };
+    if (typeof state.kids[kid].deducted !== 'number' || isNaN(state.kids[kid].deducted)) state.kids[kid].deducted = 0;
+    if (typeof state.kids[kid].penalty !== 'number' || isNaN(state.kids[kid].penalty)) state.kids[kid].penalty = 0;
     state.kids[kid].deducted += chargeAmount;
     state.kids[kid].swears++;
     state.history.unshift({
