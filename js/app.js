@@ -172,7 +172,7 @@
     Object.keys(_fbListeners).forEach(k => delete _fbListeners[k]);
   }
 
-  function initFirebase(config) {
+  async function initFirebase(config) {
     // Guard: only register listeners once per page load
     if (_fbInitialized) return true;
 
@@ -181,6 +181,16 @@
       const app = existingApps.length ? existingApps[0] : firebase.initializeApp(config);
       fbDb = firebase.database(app);
       _fbInitialized = true;
+
+      // Authenticate anonymously so Firebase security rules (auth != null) work
+      try {
+        const auth = firebase.auth(app);
+        if (!auth.currentUser) {
+          await auth.signInAnonymously();
+        }
+      } catch(authErr) {
+        console.warn('Anonymous auth failed — Firebase rules may block access:', authErr.message);
+      }
 
       // Connection health listener
       const connHandler = snap => { fbConnected = !!snap.val(); updateDbStatus(); };
@@ -298,6 +308,10 @@
   }
 
   function fbSave()              { if (!fbDb) return; try { fbDb.ref('/swearjar/gameState').set(state); } catch(e) {} }
+  function fbTransaction(path, updateFn) {
+    if (!fbDb) return Promise.resolve();
+    return fbDb.ref(path).transaction(updateFn).catch(e => console.warn('Transaction failed:', e.message));
+  }
   function fbSaveSettings(s)     { if (!fbDb) return; try { fbDb.ref('/swearjar/jarSettings').set(s); } catch(e) {} }
   function fbSaveUsers(u)        { if (!fbDb) return; try { fbDb.ref('/swearjar/appUsers').set(u); } catch(e) {} }
 
@@ -392,6 +406,8 @@
   }
 
   function deleteActivity(idx) {
+    idx = parseInt(idx);
+    if (isNaN(idx) || idx < 0 || idx >= state.history.length) { toast('⛔ Invalid entry'); return; }
     const entry = state.history[idx];
     if (!entry || !canDeleteEntry(entry)) { toast('⛔ You can\'t delete this entry'); return; }
     
@@ -459,6 +475,8 @@
   //  DISPUTE FLAG
   // ══════════════════════════════════════════════════════
   function disputeActivity(idx) {
+    idx = parseInt(idx);
+    if (isNaN(idx) || idx < 0 || idx >= state.history.length) { toast('⛔ Invalid entry'); return; }
     const entry = state.history[idx];
     if (!entry || entry.type === 'deletion') { toast('⛔ Cannot dispute this entry'); return; }
     if (entry.kid !== currentUser) { toast('⛔ You can only dispute your own charges'); return; }
@@ -472,6 +490,8 @@
   }
 
   function resolveDispute(idx) {
+    idx = parseInt(idx);
+    if (isNaN(idx) || idx < 0 || idx >= state.history.length) { toast('⛔ Invalid entry'); return; }
     if (!isCurrentUserParent()) { toast('⛔ Only parents and admins can resolve disputes'); return; }
     const entry = state.history[idx];
     if (!entry || !entry.disputed) { toast('⚠️ Not a disputed entry'); return; }
@@ -507,6 +527,8 @@
   }
 
   function dismissDispute(idx) {
+    idx = parseInt(idx);
+    if (isNaN(idx) || idx < 0 || idx >= state.history.length) { toast('⛔ Invalid entry'); return; }
     if (!isCurrentUserParent()) { toast('⛔ Only parents and admins can dismiss disputes'); return; }
     const entry = state.history[idx];
     if (!entry || !entry.disputed) { toast('⚠️ Not a disputed entry'); return; }
@@ -523,9 +545,14 @@
   // ══════════════════════════════════════════════════════
   //  ADMIN PIN  (SHA-256, stored in Firebase)
   // ══════════════════════════════════════════════════════
-  const DEFAULT_ADMIN_PIN = '0379';
+  const DEFAULT_ADMIN_PIN = '037900';
+  const PIN_LENGTH = 6;
+  const PIN_MAX_ATTEMPTS = 5;
+  const PIN_LOCKOUT_MS = 5 * 60 * 1000; // 5 minutes
   let _adminPinHash = null;
   let _pinBuffer    = '';
+  let _pinAttempts  = 0;
+  let _pinLockedUntil = 0;
 
   async function sha256(str) {
     const data = new TextEncoder().encode(str);
@@ -564,11 +591,16 @@
   }
 
   function pinKey(digit) {
-    if (_pinBuffer.length >= 4) return;
+    if (Date.now() < _pinLockedUntil) {
+      const secs = Math.ceil((_pinLockedUntil - Date.now()) / 1000);
+      document.getElementById('pin-error').textContent = `🔒 Locked — wait ${secs}s`;
+      return;
+    }
+    if (_pinBuffer.length >= PIN_LENGTH) return;
     _pinBuffer += digit;
     updatePinDots();
     document.getElementById('pin-error').textContent = '';
-    if (_pinBuffer.length === 4) submitPin();
+    if (_pinBuffer.length === PIN_LENGTH) submitPin();
   }
 
   function pinBackspace() {
@@ -577,20 +609,38 @@
   }
 
   function updatePinDots() {
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < PIN_LENGTH; i++) {
       const dot = document.getElementById(`pd${i}`);
       if (dot) dot.classList.toggle('filled', i < _pinBuffer.length);
     }
   }
 
+  function generateSessionToken() {
+    const arr = new Uint8Array(32);
+    crypto.getRandomValues(arr);
+    return Array.from(arr).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+
   async function submitPin() {
+    if (Date.now() < _pinLockedUntil) return;
     const hash   = await sha256(_pinBuffer);
     const stored = await loadAdminPinHash();
     if (hash === stored) {
+      _pinAttempts = 0;
+      // Generate admin session token and store in both sessionStorage and Firebase
+      const token = generateSessionToken();
+      sessionStorage.setItem('swearjar2-admin-token', token);
+      if (fbDb) { try { fbDb.ref('/swearjar/adminSession').set({ token, ts: new Date().toISOString() }); } catch(e) {} }
       closePinModal();
       loginAs('admin');
     } else {
-      document.getElementById('pin-error').textContent = '❌ Incorrect PIN — try again';
+      _pinAttempts++;
+      if (_pinAttempts >= PIN_MAX_ATTEMPTS) {
+        _pinLockedUntil = Date.now() + PIN_LOCKOUT_MS;
+        document.getElementById('pin-error').textContent = `🔒 Too many attempts — locked for 5 minutes`;
+      } else {
+        document.getElementById('pin-error').textContent = `❌ Incorrect PIN (${PIN_MAX_ATTEMPTS - _pinAttempts} attempts left)`;
+      }
       _pinBuffer = '';
       updatePinDots();
     }
@@ -1017,6 +1067,13 @@
     try {
       const s = localStorage.getItem('swearjar2');
       if (s) {
+        // Verify integrity signature (warn but don't block — Firebase is source of truth)
+        const storedSig = localStorage.getItem(STATE_SIGN_KEY);
+        if (storedSig) {
+          verifyState(s, storedSig).then(valid => {
+            if (!valid) console.warn('State signature mismatch — localStorage may have been tampered. Firebase data will override.');
+          });
+        }
         const data = JSON.parse(s);
         if (!data.budgets) data.budgets = {};
         // Migrate old amount-based data to new deducted model
@@ -1033,7 +1090,22 @@
     } catch(e) {}
     return defaultState();
   }
-  function save() { localStorage.setItem('swearjar2', JSON.stringify(state)); fbSave(); }
+  const STATE_SIGN_KEY = 'swearjar2-sig';
+  async function signState(stateStr) {
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode('swearjar-integrity-v1'), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(stateStr));
+    return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+  async function verifyState(stateStr, sig) {
+    const expected = await signState(stateStr);
+    return expected === sig;
+  }
+  function save() {
+    const stateStr = JSON.stringify(state);
+    localStorage.setItem('swearjar2', stateStr);
+    signState(stateStr).then(sig => localStorage.setItem(STATE_SIGN_KEY, sig));
+    fbSave();
+  }
   let state = load();
 
   // ══════════════════════════════════════════════════════
@@ -1211,7 +1283,7 @@
                   <span style="font-size:15px;font-weight:800">$${p.amount.toFixed(2)}</span>
                   ${isPaid ? '' : `
                     ${payUrl ? `<a href="${payUrl}" target="_blank" rel="noopener" class="modal-req-btn" style="font-size:11px">${pt?.icon??'💳'} Pay Now</a>` : ''}
-                    <button class="modal-req-btn" style="font-size:11px;background:linear-gradient(135deg,#00c851,#00e676)" onclick="markLoserPaid('${month}','${escHtml(name)}')">✅ Paid</button>
+                    <button class="modal-req-btn" style="font-size:11px;background:linear-gradient(135deg,#00c851,#00e676)" onclick="markLoserPaid('${month}','${escAttr(name)}')">✅ Paid</button>
                   `}
                 </div>
               </div>`;
@@ -1271,7 +1343,8 @@
     if (diff<86400) return `${Math.floor(diff/3600)}h ago`;
     const d=new Date(iso); return `${MONTHS[d.getMonth()].slice(0,3)} ${d.getDate()}`;
   }
-  function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/`/g,'&#96;'); }
+  function escAttr(s) { return escHtml(String(s)).replace(/\\/g, '\\\\'); }
   function copyToClipboard(text) { navigator.clipboard?.writeText(text).catch(()=>{}); toast(`Copied: ${text} 📋`); }
 
   // Color for a user name (jar member color or fallback purple)
@@ -1361,7 +1434,7 @@
       const isJar = KIDS.includes(u.name);
       return `
         <button class="login-btn" style="border-color:${color}22"
-          onclick="loginAs('${escHtml(u.name)}')"
+          onclick="loginAs('${escAttr(u.name)}')"
           onmouseover="this.style.borderColor='${color}'"
           onmouseout="this.style.borderColor='${color}22'">
           ${avatar
@@ -1460,8 +1533,13 @@
     }
   }
 
+  function isValidAdminSession() {
+    if (currentUser !== 'admin') return false;
+    return !!sessionStorage.getItem('swearjar2-admin-token');
+  }
+
   function isCurrentUserParent() {
-    if (currentUser === 'admin') return true;
+    if (currentUser === 'admin') return isValidAdminSession();
     const user = appUsers.find(u => u.name === currentUser);
     return user && user.isParent;
   }
@@ -1496,6 +1574,8 @@
       amount: chargeAmount, category: category.id
     });
     if (state.history.length > 500) state.history.length = 500;
+    // Use transaction for the kid's deducted value to prevent race conditions
+    fbTransaction(`/swearjar/gameState/kids/${kid}/deducted`, current => (parseFloat(current) || 0) + chargeAmount);
     save(); render();
     const newRemaining = getKidRemaining(kid);
     const amtStr = chargeAmount % 1 === 0 ? `$${chargeAmount}` : `$${chargeAmount.toFixed(2)}`;
@@ -1688,7 +1768,7 @@
             : `<div class="charge-categories">
                 ${CHARGE_CATEGORIES.map(cat => {
                   const canAfford = remaining >= cat.amount;
-                  return `<button class="charge-cat-btn" style="background:${canAfford ? cat.color : '#555'}" onclick="addSwear('${escHtml(kid)}','${cat.id}')" ${canAfford ? '' : 'disabled'} title="${cat.label}: -$${cat.amount.toFixed(2)}">${cat.emoji} -$${cat.amount % 1 === 0 ? cat.amount : cat.amount.toFixed(2)}</button>`;
+                  return `<button class="charge-cat-btn" style="background:${canAfford ? cat.color : '#555'}" onclick="addSwear('${escAttr(kid)}','${cat.id}')" ${canAfford ? '' : 'disabled'} title="${cat.label}: -$${cat.amount.toFixed(2)}">${cat.emoji} -$${cat.amount % 1 === 0 ? cat.amount : cat.amount.toFixed(2)}</button>`;
                 }).join('')}
               </div>`}
         </div>`;
@@ -1835,7 +1915,7 @@
                   <span style="font-size:15px;font-weight:800">$${p.amount.toFixed(2)}</span>
                   ${isPaid ? '' : `
                     ${payUrl ? `<a href="${payUrl}" target="_blank" rel="noopener" class="modal-req-btn" style="font-size:11px">${pt?.icon??'💳'} Pay</a>` : ''}
-                    <button class="modal-req-btn" style="font-size:11px;background:linear-gradient(135deg,#00c851,#00e676)" onclick="markLoserPaid('${r.month}','${escHtml(name)}');renderHistory()">✅ Paid</button>
+                    <button class="modal-req-btn" style="font-size:11px;background:linear-gradient(135deg,#00c851,#00e676)" onclick="markLoserPaid('${r.month}','${escAttr(name)}');renderHistory()">✅ Paid</button>
                   `}
                 </div>
               </div>`;
