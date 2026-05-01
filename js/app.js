@@ -1498,41 +1498,19 @@
     document.getElementById('login-custom-input').value = '';
   }
 
-  async function loginAs(name) {
-    // Persist identity across the reload that follows
+  function loginAs(name) {
     currentUser = name;
     sessionStorage.setItem('swearjar2-user', name);
-    // Request notification permission for jar kids (non-blocking)
     if (KIDS.includes(name) && 'Notification' in window && Notification.permission === 'granted') {
-      _storeFcmToken(); // re-affirm token
+      _storeFcmToken();
     }
-
-    // Show feedback before the reload
-    document.getElementById('login-screen').innerHTML = `
-      <div class="login-logo" style="animation:spin 1s linear infinite">🔄</div>
-      <div class="login-title" style="margin-top:16px">Loading…</div>
-      <div class="login-sub">Fetching the latest version for ${escHtml(name)}</div>`;
-
-    // Clear every SW cache so the reload fetches fresh assets from the network
-    if ('caches' in window) {
-      try {
-        const keys = await caches.keys();
-        await Promise.all(keys.map(k => caches.delete(k)));
-      } catch(e) { /* ignore — non-critical */ }
-    }
-
-    // Tell any active service worker to clear its own cache too
-    if ('serviceWorker' in navigator) {
-      try {
-        const reg = await navigator.serviceWorker.getRegistration();
-        reg?.active?.postMessage({ type: 'CLEAR_CACHE' });
-        // Give the message a moment to process, then reload
-        await new Promise(r => setTimeout(r, 150));
-      } catch(e) {}
-    }
-
-    // Hard reload — SW has empty cache so it goes to network for fresh HTML/JS
-    window.location.reload();
+    // Hide login and show the app directly — no reload needed
+    document.getElementById('login-screen').classList.add('hidden');
+    updateUserChip();
+    checkFirstRunSetup();
+    showPushBannerIfNeeded();
+    render();
+    toast(`Welcome, ${escHtml(name)}!`);
   }
 
   function loginCustom() {
