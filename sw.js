@@ -1,12 +1,15 @@
-const CACHE = 'swearjar-v3';
-const ASSETS = ['./index.html', './manifest.json', './css/styles.css', './js/app.js'];
+const CACHE = 'swearjar-v4';
+const ASSETS = ['./index.html', './manifest.json', './css/styles.css', './js/app.js', './js/core.js'];
+
+// Files that must always be fetched fresh (network-first)
+const NETWORK_FIRST = ['/js/', '/css/', '/index.html'];
 
 // ── Install: pre-cache core assets and activate immediately ──
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE)
       .then(c => c.addAll(ASSETS))
-      .then(() => self.skipWaiting())   // don't wait for old SW to die
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -22,11 +25,9 @@ self.addEventListener('activate', e => {
 // ── Messages from the page ──
 self.addEventListener('message', e => {
   if (!e.data) return;
-  // Page requests a cache wipe (sent during login flow)
   if (e.data.type === 'CLEAR_CACHE') {
     caches.delete(CACHE);
   }
-  // Page requests immediate SW takeover
   if (e.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
@@ -34,29 +35,39 @@ self.addEventListener('message', e => {
 
 // ── Fetch strategy ──
 self.addEventListener('fetch', e => {
-  // Navigation requests (the HTML page itself): network-first.
-  // Always try the network so users get fresh code; fall back to cache if offline.
+  const url = new URL(e.request.url);
+
+  // Navigation requests: always network-first
   if (e.request.mode === 'navigate') {
-    e.respondWith(
-      fetch(e.request)
-        .then(res => {
-          // Stash the fresh copy so offline still works
-          const clone = res.clone();
-          caches.open(CACHE).then(c => c.put(e.request, clone));
-          return res;
-        })
-        .catch(() => caches.match(e.request))  // offline fallback
-    );
+    e.respondWith(networkFirst(e.request));
     return;
   }
 
-  // All other assets (icons, manifest): cache-first, network fallback.
-  e.respondWith(
-    caches.match(e.request)
-      .then(cached => cached || fetch(e.request).then(res => {
-        const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone));
-        return res;
-      }))
-  );
+  // JS and CSS files: network-first (prevents cache poisoning)
+  if (NETWORK_FIRST.some(p => url.pathname.includes(p))) {
+    e.respondWith(networkFirst(e.request));
+    return;
+  }
+
+  // Static assets (icons, manifest, images): cache-first for speed
+  e.respondWith(cacheFirst(e.request));
 });
+
+function networkFirst(request) {
+  return fetch(request)
+    .then(res => {
+      const clone = res.clone();
+      caches.open(CACHE).then(c => c.put(request, clone));
+      return res;
+    })
+    .catch(() => caches.match(request));
+}
+
+function cacheFirst(request) {
+  return caches.match(request)
+    .then(cached => cached || fetch(request).then(res => {
+      const clone = res.clone();
+      caches.open(CACHE).then(c => c.put(request, clone));
+      return res;
+    }));
+}
