@@ -203,6 +203,12 @@
       white-space: nowrap;
     }
     .charge-cat-btn:active { transform: scale(.93); filter: brightness(.85); }
+    .charge-cat-btn:disabled { opacity: .4; cursor: not-allowed; transform: none; filter: none; }
+    .charge-tapped-out {
+      margin-top: 4px; width: 100%; padding: 10px 8px; text-align: center;
+      background: var(--surface2); border-radius: 10px;
+      font-size: 12px; font-weight: 700; color: var(--muted);
+    }
 
     /* ════════ ACTIONS ════════ */
     .actions { padding: 0 14px 14px; display: flex; gap: 10px; }

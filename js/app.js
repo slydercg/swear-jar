@@ -1085,7 +1085,6 @@
 
     // Build result snapshot with remaining balances
     const kidsSnapshot = {};
-    const overflows = {};
     KIDS.forEach(kid => {
       const rem = getKidRemaining(kid);
       kidsSnapshot[kid] = {
@@ -1094,8 +1093,6 @@
         remaining: Math.max(0, rem),
         allocation: alloc,
       };
-      // Track overflow penalties
-      if (rem < 0) overflows[kid] = Math.abs(rem);
     });
 
     // Build payment records: each non-winner owes their lost amount
@@ -1120,13 +1117,9 @@
 
     state.monthlyResults.unshift(result);
 
-    // Reset for new month, applying overflow penalties
+    // Reset for new month
     KIDS.forEach(k => {
-      state.kids[k] = {
-        deducted: 0,
-        swears: 0,
-        penalty: overflows[k] || 0, // carry over overflow from last month
-      };
+      state.kids[k] = { deducted: 0, swears: 0, penalty: 0 };
     });
     state.history = [];
     state.currentMonth = newMonth;
@@ -1479,13 +1472,23 @@
   function addSwear(kid, categoryId) {
     const category = CHARGE_CATEGORIES.find(c => c.id === categoryId) || CHARGE_CATEGORIES[1];
     const chargeAmount = category.amount;
+    // Check remaining balance before charging
+    if (!state.kids[kid]) state.kids[kid] = { deducted:0, swears:0, penalty:0 };
+    if (typeof state.kids[kid].deducted !== 'number' || isNaN(state.kids[kid].deducted)) state.kids[kid].deducted = 0;
+    if (typeof state.kids[kid].penalty !== 'number' || isNaN(state.kids[kid].penalty)) state.kids[kid].penalty = 0;
+    const remaining = getKidRemaining(kid);
+    if (remaining <= 0) {
+      toast(`⛔ ${kid} has $0 left — no more charges this month`);
+      return;
+    }
+    if (chargeAmount > remaining) {
+      toast(`⛔ ${kid} only has $${remaining.toFixed(2)} left — can't charge $${chargeAmount.toFixed(2)}`);
+      return;
+    }
     // Haptic feedback on iOS
     if (window.navigator && window.navigator.vibrate) {
       window.navigator.vibrate(10);
     }
-    if (!state.kids[kid]) state.kids[kid] = { deducted:0, swears:0, penalty:0 };
-    if (typeof state.kids[kid].deducted !== 'number' || isNaN(state.kids[kid].deducted)) state.kids[kid].deducted = 0;
-    if (typeof state.kids[kid].penalty !== 'number' || isNaN(state.kids[kid].penalty)) state.kids[kid].penalty = 0;
     state.kids[kid].deducted += chargeAmount;
     state.kids[kid].swears++;
     state.history.unshift({
@@ -1494,12 +1497,12 @@
     });
     if (state.history.length > 500) state.history.length = 500;
     save(); render();
-    const remaining = getKidRemaining(kid);
+    const newRemaining = getKidRemaining(kid);
     const amtStr = chargeAmount % 1 === 0 ? `$${chargeAmount}` : `$${chargeAmount.toFixed(2)}`;
-    if (remaining < 0) {
-      toast(`${kid} -${amtStr} ${category.emoji} · $${Math.abs(remaining).toFixed(2)} over! Carries to next month`);
+    if (newRemaining <= 0) {
+      toast(`${kid} -${amtStr} ${category.emoji} · $0.00 remaining — tapped out!`);
     } else {
-      toast(`${kid} -${amtStr} ${category.emoji} · $${remaining.toFixed(2)} remaining`);
+      toast(`${kid} -${amtStr} ${category.emoji} · $${newRemaining.toFixed(2)} remaining`);
     }
     const card = document.querySelector(`[data-kid="${kid}"]`);
     if (card) { card.classList.remove('pulse'); void card.offsetWidth; card.classList.add('pulse'); }
@@ -1550,7 +1553,7 @@
           <span>${i===0?'🥇':i===1?'🥈':i===2?'🥉':'4️⃣'}</span>
           <span style="font-weight:700;color:${COLOR_HEX[kid]}">${escHtml(kid)}</span>
         </div>
-        <div class="modal-row-right">${swears} swear${swears!==1?'s':''} · $${rem.toFixed(2)} remaining${rem < 0 ? ' (overflow!)' : ''}</div>
+        <div class="modal-row-right">${swears} swear${swears!==1?'s':''} · $${rem.toFixed(2)} remaining</div>
       </div>`;
     }).join('');
     document.getElementById('modal-payment').innerHTML = '';
@@ -1564,13 +1567,11 @@
     const alloc = getCurrentAllocation();
     const totalDed = totalDeductedAll();
     const winnerPrize = Math.max(0, Math.round((budget - totalDed) * 100) / 100);
-    // Build result with overflow tracking
+    // Build result snapshot
     const kidsSnapshot = {};
-    const overflows = {};
     KIDS.forEach(kid => {
       const rem = getKidRemaining(kid);
       kidsSnapshot[kid] = { deducted: state.kids[kid]?.deducted??0, swears: state.kids[kid]?.swears??0, remaining: Math.max(0,rem), allocation: alloc };
-      if (rem < 0) overflows[kid] = Math.abs(rem);
     });
     // Build payment records
     const payments = {};
@@ -1590,7 +1591,7 @@
       }
     });
     state.monthlyResults.unshift({ month, winners, budget, allocation: alloc, winnerPrize, kids: kidsSnapshot, payments });
-    KIDS.forEach(k=>{state.kids[k]={deducted:0,swears:0,penalty:overflows[k]||0};});
+    KIDS.forEach(k=>{state.kids[k]={deducted:0,swears:0,penalty:0};});
     state.history=[];
     save(); closeModal(); render(); switchView('tracker');
     // Show the winner announcement with payment buttons
@@ -1682,9 +1683,14 @@
           <div class="kid-count">${swears} swear${swears!==1?'s':''}${penalty > 0 ? ` · -$${penalty.toFixed(2)} penalty` : ''}</div>
           <div class="kid-balance-bar"><div class="kid-balance-fill" style="width:${pctLeft}%;background:${isOver?'#ff4444':COLORS[kid]??'#888'}"></div></div>
           ${streak >= 3 ? `<div class="streak-badge">${getStreakBadge(streak)?.badge ?? '🔥'} ${streak >= 30 ? '30+' : streak}-day streak · ${getStreakBadge(streak)?.label ?? ''}</div>` : ''}
-          <div class="charge-categories">
-            ${CHARGE_CATEGORIES.map(cat => `<button class="charge-cat-btn" style="background:${cat.color}" onclick="addSwear('${escHtml(kid)}','${cat.id}')" title="${cat.label}: -$${cat.amount.toFixed(2)}">${cat.emoji} -$${cat.amount % 1 === 0 ? cat.amount : cat.amount.toFixed(2)}</button>`).join('')}
-          </div>
+          ${remaining <= 0
+            ? `<div class="charge-tapped-out">⛔ Tapped out for the month</div>`
+            : `<div class="charge-categories">
+                ${CHARGE_CATEGORIES.map(cat => {
+                  const canAfford = remaining >= cat.amount;
+                  return `<button class="charge-cat-btn" style="background:${canAfford ? cat.color : '#555'}" onclick="addSwear('${escHtml(kid)}','${cat.id}')" ${canAfford ? '' : 'disabled'} title="${cat.label}: -$${cat.amount.toFixed(2)}">${cat.emoji} -$${cat.amount % 1 === 0 ? cat.amount : cat.amount.toFixed(2)}</button>`;
+                }).join('')}
+              </div>`}
         </div>`;
     }).join('');
     const recent=state.history.slice(0,20), actEl=document.getElementById('activity-list');
