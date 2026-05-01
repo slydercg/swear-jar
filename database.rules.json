@@ -54,7 +54,7 @@
       },
 
       "adminPin": {
-        ".read": "auth != null",
+        ".read": false,
         ".write": "auth != null",
         ".validate": "newData.isString() && newData.val().length == 64"
       },

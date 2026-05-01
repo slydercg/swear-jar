@@ -11,10 +11,31 @@ const https = require('https');
 
 // ─── CONFIG ────────────────────────────────────────────────────────────────
 const FIREBASE_DB_URL = 'https://swear-jar-ef967-default-rtdb.firebaseio.com';
+const FIREBASE_API_KEY = process.env.FIREBASE_API_KEY || 'AIzaSyCGypt6brjLpMaahSe7z3wP_M-6ge1yDXM';
 const SWEARJAR_PATH   = '/swearjar';
 const STATE_PATH      = SWEARJAR_PATH + '/gameState.json';
 const SETTINGS_PATH   = SWEARJAR_PATH + '/jarSettings.json';
 const CHARGE_AMOUNT   = 1;
+
+let _authToken = null;
+
+async function getAuthToken() {
+  if (_authToken) return _authToken;
+  const body = JSON.stringify({ returnSecureToken: true });
+  const options = {
+    hostname: 'identitytoolkit.googleapis.com',
+    path: `/v1/accounts:signUp?key=${FIREBASE_API_KEY}`,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
+  };
+  try {
+    const result = await httpsRequest(options, body);
+    _authToken = result.idToken;
+    return _authToken;
+  } catch(e) {
+    return null;
+  }
+}
 
 const FALLBACK_KID_NAMES = {
   delaney: 'Delaney',
@@ -48,7 +69,9 @@ function parseDbUrl(url) {
 
 async function fetchKidNames() {
   const { host, basePath } = parseDbUrl(FIREBASE_DB_URL);
-  const options = { hostname: host, path: basePath + SETTINGS_PATH, method: 'GET' };
+  const token = await getAuthToken();
+  const authParam = token ? `?auth=${token}` : '';
+  const options = { hostname: host, path: basePath + SETTINGS_PATH.replace('.json', '') + '.json' + authParam, method: 'GET' };
   try {
     const data = await httpsRequest(options);
     if (!data) return FALLBACK_KID_NAMES;
@@ -59,24 +82,28 @@ async function fetchKidNames() {
     });
     return Object.keys(result).length > 0 ? result : FALLBACK_KID_NAMES;
   } catch(e) {
-    console.warn('fetchKidNames fallback:', e.message);
+    console.warn('Settings fetch failed');
     return FALLBACK_KID_NAMES;
   }
 }
 
 async function readState() {
   const { host, basePath } = parseDbUrl(FIREBASE_DB_URL);
-  const options = { hostname: host, path: basePath + STATE_PATH, method: 'GET' };
+  const token = await getAuthToken();
+  const authParam = token ? `?auth=${token}` : '';
+  const options = { hostname: host, path: basePath + STATE_PATH.replace('.json', '') + '.json' + authParam, method: 'GET' };
   const data = await httpsRequest(options);
   return data || {};
 }
 
 async function patchState(patch) {
   const { host, basePath } = parseDbUrl(FIREBASE_DB_URL);
+  const token = await getAuthToken();
+  const authParam = token ? `?auth=${token}` : '';
   const bodyStr = JSON.stringify(patch);
   const options = {
     hostname: host,
-    path: basePath + STATE_PATH,
+    path: basePath + STATE_PATH.replace('.json', '') + '.json' + authParam,
     method: 'PATCH',
     headers: {
       'Content-Type':   'application/json',
@@ -126,7 +153,7 @@ const ChargeKidIntentHandler = {
     try {
       state = await readState();
     } catch (err) {
-      console.error('Firebase read error:', err);
+      console.error('Read failed');
       return handlerInput.responseBuilder
         .speak('Sorry, I had trouble connecting to the swear jar. Please try again.')
         .getResponse();
@@ -145,7 +172,7 @@ const ChargeKidIntentHandler = {
     try {
       await patchState({ kids, history: arrayToFb(trimmed) });
     } catch (err) {
-      console.error('Firebase write error:', err);
+      console.error('Write failed');
       return handlerInput.responseBuilder
         .speak('Sorry, I had trouble saving. Please check the app.')
         .getResponse();
@@ -188,7 +215,7 @@ const GetBalanceIntentHandler = {
     try {
       state = await readState();
     } catch (err) {
-      console.error('Firebase read error:', err);
+      console.error('Read failed');
       return handlerInput.responseBuilder
         .speak('Sorry, I had trouble connecting to the swear jar.')
         .getResponse();
@@ -229,7 +256,7 @@ const GetLeaderboardIntentHandler = {
     try {
       state = await readState();
     } catch (err) {
-      console.error('Firebase read error:', err);
+      console.error('Read failed');
       return handlerInput.responseBuilder
         .speak('Sorry, I had trouble connecting to the swear jar.')
         .getResponse();
@@ -270,7 +297,7 @@ const GetDailySummaryIntentHandler = {
     try {
       state = await readState();
     } catch (err) {
-      console.error('Firebase read error:', err);
+      console.error('Read failed');
       return handlerInput.responseBuilder
         .speak('Sorry, I had trouble connecting to the swear jar.')
         .getResponse();
@@ -440,7 +467,7 @@ const SessionEndedRequestHandler = {
     return Alexa.getRequestType(handlerInput.requestEnvelope) === 'SessionEndedRequest';
   },
   handle(handlerInput) {
-    console.log('Session ended:', JSON.stringify(handlerInput.requestEnvelope));
+    // Session ended — no logging in production
     return handlerInput.responseBuilder.getResponse();
   },
 };
@@ -450,7 +477,7 @@ const SessionEndedRequestHandler = {
 const ErrorHandler = {
   canHandle() { return true; },
   handle(handlerInput, error) {
-    console.error('Error:', error.message, error.stack);
+    console.error('Skill error occurred');
     return handlerInput.responseBuilder
       .speak('Sorry, something went wrong. Please try again.')
       .reprompt('Please try again.')

@@ -26,6 +26,20 @@
 <body>
 
   <!-- ═══════════ LOGIN SCREEN ═══════════ -->
+  <!-- ═══════════ ONBOARDING TUTORIAL ═══════════ -->
+  <div id="onboarding-overlay" class="onboarding-overlay hidden">
+    <div class="onboarding-card">
+      <div class="onboarding-step" id="onboard-step">
+        <div class="onboarding-emoji">🤐</div>
+        <div class="onboarding-title">Welcome to Swear Jar!</div>
+        <div class="onboarding-text">A fun family challenge to keep language clean. Set a monthly budget, and every swear costs money from the pot.</div>
+      </div>
+      <div class="onboarding-dots" id="onboard-dots"></div>
+      <button class="onboarding-btn" id="onboard-btn" onclick="advanceOnboarding()">Next →</button>
+      <button class="onboarding-skip" onclick="skipOnboarding()">Skip</button>
+    </div>
+  </div>
+
   <div id="login-screen" class="login-screen">
     <div class="login-logo">🤐</div>
     <div class="login-title">Slyder Swear Jar</div>
@@ -105,9 +119,9 @@
     <div class="header"><div class="header-row-bare"><div class="app-title">🏆 Winners</div></div></div>
     <div class="winners-inner">
       <div class="report-month-nav" id="winners-nav" style="display:none">
-        <button class="report-month-btn" id="win-prev" onclick="winnersMonthStep(1)">‹</button>
+        <button class="report-month-btn" id="win-prev" aria-label="Previous month" onclick="winnersMonthStep(1)">‹</button>
         <div class="report-month-label" id="win-month-label">—</div>
-        <button class="report-month-btn" id="win-next" onclick="winnersMonthStep(-1)">›</button>
+        <button class="report-month-btn" id="win-next" aria-label="Next month" onclick="winnersMonthStep(-1)">›</button>
       </div>
       <div id="winners-content"></div>
     </div>
@@ -118,9 +132,9 @@
     <div class="header"><div class="header-row-bare"><div class="app-title">📈 Reports</div></div></div>
     <div class="reports-inner">
       <div class="report-month-nav">
-        <button class="report-month-btn" id="rep-prev" onclick="reportMonthStep(1)">‹</button>
+        <button class="report-month-btn" id="rep-prev" aria-label="Previous month" onclick="reportMonthStep(1)">‹</button>
         <div class="report-month-label" id="rep-month-label">—</div>
-        <button class="report-month-btn" id="rep-next" onclick="reportMonthStep(-1)">›</button>
+        <button class="report-month-btn" id="rep-next" aria-label="Next month" onclick="reportMonthStep(-1)">›</button>
       </div>
       <div class="chart-card">
         <div class="chart-title">Swears by Day</div>
@@ -285,18 +299,18 @@
         <div class="pin-dot" id="pd5"></div>
       </div>
       <div class="pin-keypad">
-        <button class="pin-key" onclick="pinKey('1')">1</button>
-        <button class="pin-key" onclick="pinKey('2')">2</button>
-        <button class="pin-key" onclick="pinKey('3')">3</button>
-        <button class="pin-key" onclick="pinKey('4')">4</button>
-        <button class="pin-key" onclick="pinKey('5')">5</button>
-        <button class="pin-key" onclick="pinKey('6')">6</button>
-        <button class="pin-key" onclick="pinKey('7')">7</button>
-        <button class="pin-key" onclick="pinKey('8')">8</button>
-        <button class="pin-key" onclick="pinKey('9')">9</button>
+        <button class="pin-key" onclick="pinKey('1')" aria-label="1">1</button>
+        <button class="pin-key" onclick="pinKey('2')" aria-label="2">2</button>
+        <button class="pin-key" onclick="pinKey('3')" aria-label="3">3</button>
+        <button class="pin-key" onclick="pinKey('4')" aria-label="4">4</button>
+        <button class="pin-key" onclick="pinKey('5')" aria-label="5">5</button>
+        <button class="pin-key" onclick="pinKey('6')" aria-label="6">6</button>
+        <button class="pin-key" onclick="pinKey('7')" aria-label="7">7</button>
+        <button class="pin-key" onclick="pinKey('8')" aria-label="8">8</button>
+        <button class="pin-key" onclick="pinKey('9')" aria-label="9">9</button>
         <div class="pin-key empty"></div>
-        <button class="pin-key" onclick="pinKey('0')">0</button>
-        <button class="pin-key del" onclick="pinBackspace()">⌫</button>
+        <button class="pin-key" onclick="pinKey('0')" aria-label="0">0</button>
+        <button class="pin-key del" onclick="pinBackspace()" aria-label="Backspace">⌫</button>
       </div>
       <div class="pin-error" id="pin-error"></div>
       <button class="pin-cancel" onclick="closePinModal()">Cancel</button>
