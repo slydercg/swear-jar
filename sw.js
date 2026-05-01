@@ -1,4 +1,4 @@
-const CACHE = 'swearjar-v4';
+const CACHE = 'swearjar-v5';
 const ASSETS = ['./index.html', './manifest.json', './css/styles.css', './js/app.js', './js/core.js'];
 
 // Files that must always be fetched fresh (network-first)
