@@ -1295,6 +1295,21 @@
       document.getElementById('announce-requests').innerHTML = '';
     }
 
+    // Charity donation option
+    const charity = getCharitySetting();
+    if (charity && wp > 0) {
+      const charityHtml = `
+        <div style="text-align:center;margin-top:12px;padding:14px;background:rgba(0,200,100,.08);border:1px solid rgba(0,200,100,.2);border-radius:16px">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:#56c278;margin-bottom:6px">🎁 Charity Option</div>
+          <div style="font-size:14px;margin-bottom:10px">Donate <strong>$${wp.toFixed ? wp.toFixed(2) : wp}</strong> to <strong>${escHtml(charity.name)}</strong> instead?</div>
+          <button class="modal-req-btn" style="font-size:13px;background:linear-gradient(135deg,#56c278,#2e7d32);padding:10px 20px" onclick="donateToCharity(${wp},'${month}');dismissAnnouncement()">💝 Donate Now</button>
+        </div>`;
+      document.getElementById('announce-requests').insertAdjacentHTML('beforeend', charityHtml);
+    }
+
+    // Play celebration animation
+    playCelebration(localStorage.getItem('swearjar2-celebration') || 'confetti');
+
     overlay.classList.remove('hidden');
   }
 
@@ -1740,7 +1755,7 @@
     document.getElementById('pot-amount').textContent = `$${potLeft.toFixed(2)}`;
     // Show per-person breakdown
     const potLabelEl = document.getElementById('pot-label');
-    if (potLabelEl) potLabelEl.textContent = `💰 Remaining of $${budget.toFixed(0)}`;
+    if (potLabelEl) potLabelEl.textContent = `${getActiveJar().icon} Remaining of $${budget.toFixed(0)}`;
     const potSubEl = document.getElementById('pot-sub');
     if (potSubEl) potSubEl.textContent = `${KIDS.length} participants · $${alloc.toFixed(2)} each`;
     // Show who's winning and their remaining amount
@@ -1799,11 +1814,12 @@
           ${remaining <= 0
             ? `<div class="charge-tapped-out">⛔ Tapped out for the month</div>`
             : `<div class="charge-categories">
-                ${CHARGE_CATEGORIES.map(cat => {
+                ${(getActiveJar().categories || CHARGE_CATEGORIES).map(cat => {
                   const canAfford = remaining >= cat.amount;
                   return `<button class="charge-cat-btn" style="background:${canAfford ? cat.color : '#555'}" onclick="addSwear('${escAttr(kid)}','${cat.id}')" ${canAfford ? '' : 'disabled'} title="${cat.label}: -$${cat.amount.toFixed(2)}">${cat.emoji} -$${cat.amount % 1 === 0 ? cat.amount : cat.amount.toFixed(2)}</button>`;
                 }).join('')}
-              </div>`}
+              </div>
+              <button class="charge-photo-btn" onclick="capturePhotoEvidence('${escAttr(kid)}','${(getActiveJar().categories||CHARGE_CATEGORIES)[1]?.id||'moderate'}')" title="Charge with photo evidence">📸</button>`}
         </div>`;
     }).join('');
     const recent=state.history.slice(0,_activityShown), actEl=document.getElementById('activity-list');
@@ -1845,7 +1861,7 @@
               <div class="activity-time">${relativeTime(ts)}</div>
               ${isDisputed
                 ? `<div class="activity-badge disputed-badge">🚩 Disputed</div>`
-                : `<div class="activity-badge">${entry.category ? (CHARGE_CATEGORIES.find(c=>c.id===entry.category)?.emoji??'') + ' ' : ''}-$${entry.amount || 1}</div>`}
+                : `<div class="activity-badge">${entry.category ? (CHARGE_CATEGORIES.find(c=>c.id===entry.category)?.emoji??'') + ' ' : ''}-$${entry.amount || 1}${entry.photo ? ' 📸' : ''}</div>`}
               ${canDispute ? `<button class="activity-dispute-btn" onclick="disputeActivity(${idx})" title="Flag charge as disputed">🚩</button>` : ''}
               ${isDisputed && isCurrentUserParent() ? `<button class="activity-resolve-btn" onclick="resolveDispute(${idx})" title="Resolve dispute (remove charge)">✅</button><button class="activity-dismiss-btn" onclick="dismissDispute(${idx})" title="Dismiss dispute (keep charge)">❌</button>` : ''}
               ${canDel ? `<button class="activity-del-btn" onclick="deleteActivity(${idx})" title="Delete this entry">🗑️</button>` : ''}
@@ -2189,6 +2205,59 @@
     if (budgetSection) budgetSection.style.display = (currentUser === 'admin') ? '' : 'none';
     const familySection = document.getElementById('family-section');
     if (familySection) familySection.style.display = (currentUser === 'admin') ? '' : 'none';
+
+    // Jar selector
+    const jarSel = document.getElementById('jar-selector');
+    if (jarSel) {
+      jarSel.innerHTML = customJars.map(j => `
+        <button class="jar-chip ${j.id===activeJarId?'active':''}" onclick="switchJar('${j.id}')">
+          ${j.icon} ${escHtml(j.name)}
+          ${j.id !== 'swear' ? `<span class="jar-chip-remove" onclick="event.stopPropagation();removeCustomJar('${j.id}')">×</span>` : ''}
+        </button>`).join('');
+    }
+    const jarTemplates = document.getElementById('jar-templates');
+    const jarTemplateList = document.getElementById('jar-template-list');
+    if (jarTemplates && currentUser === 'admin') {
+      jarTemplates.style.display = '';
+      const existing = customJars.map(j => j.id);
+      const available = JAR_TEMPLATES.filter(t => !existing.includes(t.id));
+      jarTemplateList.innerHTML = available.length ? available.map(t =>
+        `<button class="jar-chip" onclick="addCustomJar('${t.id}');renderSettings()">${t.icon} ${t.name}</button>`
+      ).join('') : '<span style="font-size:12px;color:var(--muted)">All jars added</span>';
+    }
+
+    // Family theme picker (admin only)
+    const themeSection = document.getElementById('family-theme-section');
+    if (themeSection) themeSection.style.display = (currentUser === 'admin') ? '' : 'none';
+    if (currentUser === 'admin') {
+      const picker = document.getElementById('family-theme-picker');
+      if (picker) {
+        const current = loadFamilyTheme();
+        picker.innerHTML = FAMILY_THEMES.map(t =>
+          `<button class="jar-chip ${t.id===current?'active':''}" onclick="applyFamilyTheme('${t.id}');renderSettings()">
+            ${t.name} ${t.premium?'👑':''}
+          </button>`).join('');
+      }
+    }
+
+    // Charity picker (admin only)
+    const charitySection = document.getElementById('charity-section');
+    if (charitySection) charitySection.style.display = (currentUser === 'admin') ? '' : 'none';
+    if (currentUser === 'admin') {
+      const charityPicker = document.getElementById('charity-picker');
+      if (charityPicker) {
+        const current = getCharitySetting();
+        charityPicker.innerHTML = CHARITY_OPTIONS.map(c =>
+          `<button class="jar-chip ${current?.id===c.id?'active':''}" onclick="setCharitySetting(${c.id==='custom'?'null':JSON.stringify(c).replace(/"/g,'&quot;')});renderSettings()" style="margin-bottom:4px">
+            ${c.icon} ${c.name}
+          </button>`).join('') +
+          (current ? `<div style="font-size:12px;color:var(--muted);margin-top:4px">✅ ${current.name} selected — pot will be donated at month end</div>` : '');
+      }
+    }
+
+    // Annual report (admin only)
+    const annualSection = document.getElementById('annual-report-section');
+    if (annualSection) annualSection.style.display = (currentUser === 'admin') ? '' : 'none';
     if (currentUser === 'admin') renderBudgetList();
   }
 
@@ -2565,7 +2634,342 @@
   }
 
   // ══════════════════════════════════════════════════════
-  //  GDPR: DELETE ALL USER DATA (Item 3)
+  //  CUSTOM JARS (Premium Feature)
+  // ══════════════════════════════════════════════════════
+  const DEFAULT_JARS = [
+    { id: 'swear', name: 'Swear Jar', icon: '🤐', categories: [
+      { id: 'mild', label: 'Mild', amount: 0.50, emoji: '😬', color: '#ffa726' },
+      { id: 'moderate', label: 'Moderate', amount: 1.00, emoji: '🤬', color: '#e91e8c' },
+      { id: 'severe', label: 'Severe', amount: 2.00, emoji: '🔥', color: '#ff4444' },
+    ]},
+  ];
+  const JAR_TEMPLATES = [
+    { id: 'chore', name: 'Chore Jar', icon: '🧹', categories: [
+      { id: 'skip', label: 'Skipped', amount: 1.00, emoji: '😒', color: '#ff7043' },
+      { id: 'late', label: 'Late', amount: 0.50, emoji: '⏰', color: '#ffa726' },
+      { id: 'forgot', label: 'Forgot', amount: 0.75, emoji: '🤷', color: '#ab47bc' },
+    ]},
+    { id: 'homework', name: 'Homework Jar', icon: '📚', categories: [
+      { id: 'missing', label: 'Missing', amount: 2.00, emoji: '📝', color: '#ff4444' },
+      { id: 'late', label: 'Late', amount: 1.00, emoji: '⏰', color: '#ffa726' },
+      { id: 'incomplete', label: 'Incomplete', amount: 0.50, emoji: '😬', color: '#e91e8c' },
+    ]},
+    { id: 'screentime', name: 'Screen Time Jar', icon: '📱', categories: [
+      { id: 'over30', label: '30min Over', amount: 0.50, emoji: '📱', color: '#ffa726' },
+      { id: 'over60', label: '1hr Over', amount: 1.00, emoji: '🎮', color: '#e91e8c' },
+      { id: 'sneaky', label: 'Sneaky Use', amount: 2.00, emoji: '🫣', color: '#ff4444' },
+    ]},
+    { id: 'kindness', name: 'Kindness Jar', icon: '💝', categories: [
+      { id: 'mean', label: 'Mean Words', amount: 1.00, emoji: '😠', color: '#ff4444' },
+      { id: 'nohelp', label: 'Refused Help', amount: 0.50, emoji: '🙅', color: '#ffa726' },
+      { id: 'fight', label: 'Fighting', amount: 1.50, emoji: '👊', color: '#e91e8c' },
+    ]},
+  ];
+
+  function loadJars() {
+    try { const s = localStorage.getItem('swearjar2-jars'); if (s) return JSON.parse(s); } catch(e) {}
+    return DEFAULT_JARS.map(j => ({...j}));
+  }
+  function saveJars(jars) {
+    localStorage.setItem('swearjar2-jars', JSON.stringify(jars));
+    if (fbDb) { try { fbDb.ref('/swearjar/jars').set(jars); } catch(e) {} }
+  }
+  let customJars = loadJars();
+  let activeJarId = localStorage.getItem('swearjar2-active-jar') || 'swear';
+
+  function getActiveJar() {
+    return customJars.find(j => j.id === activeJarId) || customJars[0] || DEFAULT_JARS[0];
+  }
+  function switchJar(jarId) {
+    activeJarId = jarId;
+    localStorage.setItem('swearjar2-active-jar', jarId);
+    render();
+    toast(`Switched to ${getActiveJar().name} ${getActiveJar().icon}`);
+  }
+  function addCustomJar(templateId) {
+    const template = JAR_TEMPLATES.find(t => t.id === templateId);
+    if (!template) return;
+    if (customJars.find(j => j.id === template.id)) { toast('Jar already exists'); return; }
+    customJars.push({...template, categories: template.categories.map(c => ({...c}))});
+    saveJars(customJars);
+    toast(`${template.icon} ${template.name} added!`);
+  }
+  function removeCustomJar(jarId) {
+    if (jarId === 'swear') { toast('Cannot remove the default jar'); return; }
+    customJars = customJars.filter(j => j.id !== jarId);
+    if (activeJarId === jarId) activeJarId = 'swear';
+    saveJars(customJars);
+    localStorage.setItem('swearjar2-active-jar', activeJarId);
+    toast('Jar removed');
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  FAMILY THEMES (Premium Feature)
+  // ══════════════════════════════════════════════════════
+  const FAMILY_THEMES = [
+    { id: 'default', name: 'Classic', premium: false, vars: {} },
+    { id: 'candy', name: 'Candy Pop', premium: true, vars: { '--purple': '#ff6b9d', '--pink': '#c44dff', '--surface': '#1a1028', '--surface2': '#251838' } },
+    { id: 'ocean', name: 'Deep Ocean', premium: true, vars: { '--purple': '#00bcd4', '--pink': '#0091ea', '--surface': '#0a1628', '--surface2': '#102038' } },
+    { id: 'forest', name: 'Enchanted Forest', premium: true, vars: { '--purple': '#66bb6a', '--pink': '#2e7d32', '--surface': '#0a1a12', '--surface2': '#122a1a' } },
+    { id: 'sunset', name: 'Sunset Vibes', premium: true, vars: { '--purple': '#ff8a65', '--pink': '#ff5722', '--surface': '#1a1210', '--surface2': '#2a1a14' } },
+    { id: 'neon', name: 'Neon Nights', premium: true, vars: { '--purple': '#e040fb', '--pink': '#00e5ff', '--surface': '#0d0d1a', '--surface2': '#1a1a2e' } },
+  ];
+  const CELEBRATION_ANIMATIONS = [
+    { id: 'confetti', name: 'Confetti', premium: false },
+    { id: 'fireworks', name: 'Fireworks', premium: true },
+    { id: 'balloons', name: 'Balloons', premium: true },
+    { id: 'stars', name: 'Star Burst', premium: true },
+  ];
+
+  function applyFamilyTheme(themeId) {
+    const theme = FAMILY_THEMES.find(t => t.id === themeId);
+    if (!theme) return;
+    const root = document.documentElement;
+    // Reset to defaults first
+    FAMILY_THEMES.forEach(t => Object.keys(t.vars).forEach(k => root.style.removeProperty(k)));
+    // Apply new theme vars
+    Object.entries(theme.vars).forEach(([k, v]) => root.style.setProperty(k, v));
+    localStorage.setItem('swearjar2-family-theme', themeId);
+  }
+  function loadFamilyTheme() { return localStorage.getItem('swearjar2-family-theme') || 'default'; }
+
+  function playCelebration(animId) {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;pointer-events:none;overflow:hidden';
+    document.body.appendChild(overlay);
+    const particles = animId === 'fireworks' ? '🎆✨💫⭐🌟' : animId === 'balloons' ? '🎈🎈🎈🎈🎈' : animId === 'stars' ? '⭐🌟✨💫⭐' : '🎊🎉✨🎊🎉';
+    for (let i = 0; i < 30; i++) {
+      const p = document.createElement('div');
+      const char = particles[Math.floor(Math.random() * particles.length)];
+      p.textContent = char;
+      p.style.cssText = `position:absolute;font-size:${20+Math.random()*20}px;left:${Math.random()*100}%;top:100%;animation:celebFloat ${1.5+Math.random()*2}s ease-out forwards;animation-delay:${Math.random()*0.5}s`;
+      overlay.appendChild(p);
+    }
+    setTimeout(() => overlay.remove(), 4000);
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  ANNUAL FAMILY REPORT
+  // ══════════════════════════════════════════════════════
+  function generateAnnualReport(year) {
+    year = year || new Date().getFullYear();
+    const yearResults = (state.monthlyResults || []).filter(r => r.month && r.month.startsWith(String(year)));
+    if (!yearResults.length) { toast('No data for ' + year); return null; }
+
+    const allKids = new Set();
+    const stats = {};
+    let totalSwears = 0, totalBudget = 0;
+    const winCounts = {};
+
+    yearResults.forEach(r => {
+      Object.entries(r.kids || {}).forEach(([kid, data]) => {
+        allKids.add(kid);
+        if (!stats[kid]) stats[kid] = { swears: 0, deducted: 0, wins: 0, months: 0 };
+        stats[kid].swears += (data.swears || 0);
+        stats[kid].deducted += (data.deducted || 0);
+        stats[kid].months++;
+        totalSwears += (data.swears || 0);
+      });
+      totalBudget += (r.budget || 0);
+      (r.winners || []).forEach(w => {
+        if (!winCounts[w]) winCounts[w] = 0;
+        winCounts[w]++;
+        if (stats[w]) stats[w].wins++;
+      });
+    });
+
+    const sortedBySwears = [...allKids].sort((a,b) => (stats[b]?.swears||0) - (stats[a]?.swears||0));
+    const sortedByWins = [...allKids].sort((a,b) => (stats[b]?.wins||0) - (stats[a]?.wins||0));
+    const mostImproved = [...allKids].sort((a,b) => {
+      const aFirst = yearResults[yearResults.length-1]?.kids?.[a]?.swears || 0;
+      const aLast = yearResults[0]?.kids?.[a]?.swears || 0;
+      const bFirst = yearResults[yearResults.length-1]?.kids?.[b]?.swears || 0;
+      const bLast = yearResults[0]?.kids?.[b]?.swears || 0;
+      return (aLast - aFirst) - (bLast - bFirst);
+    });
+
+    return {
+      year, months: yearResults.length, totalSwears, totalBudget,
+      kids: [...allKids], stats, winCounts,
+      biggestOffender: sortedBySwears[0],
+      mostWins: sortedByWins[0],
+      mostImproved: mostImproved[0],
+      cleanest: sortedBySwears[sortedBySwears.length - 1],
+    };
+  }
+
+  function showAnnualReport() {
+    const year = new Date().getFullYear();
+    const report = generateAnnualReport(year);
+    if (!report) return;
+
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;z-index:960;background:rgba(0,0,0,.9);display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto';
+    overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+
+    overlay.innerHTML = `
+      <div style="background:var(--surface);border-radius:28px;padding:28px 22px;max-width:440px;width:100%;text-align:center;border:1px solid var(--border)">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:2px;color:var(--purple);margin-bottom:12px">📊 ${report.year} Year in Review</div>
+        <div style="font-size:36px;margin-bottom:4px">📅</div>
+        <div style="font-size:22px;font-weight:900;margin-bottom:16px">${report.year} Family Report</div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;text-align:center;margin-bottom:18px">
+          <div style="background:var(--surface2);border-radius:14px;padding:14px"><div style="font-size:24px;font-weight:900">${report.months}</div><div style="font-size:11px;color:var(--muted)">Months</div></div>
+          <div style="background:var(--surface2);border-radius:14px;padding:14px"><div style="font-size:24px;font-weight:900">${report.totalSwears}</div><div style="font-size:11px;color:var(--muted)">Total Swears</div></div>
+          <div style="background:var(--surface2);border-radius:14px;padding:14px"><div style="font-size:24px;font-weight:900">$${report.totalBudget}</div><div style="font-size:11px;color:var(--muted)">Total Budget</div></div>
+          <div style="background:var(--surface2);border-radius:14px;padding:14px"><div style="font-size:24px;font-weight:900">${report.kids.length}</div><div style="font-size:11px;color:var(--muted)">Participants</div></div>
+        </div>
+
+        <div style="text-align:left;margin-bottom:16px">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:8px">🏆 Awards</div>
+          ${report.mostWins ? `<div style="background:rgba(124,77,255,.1);border:1px solid rgba(124,77,255,.2);border-radius:12px;padding:10px 14px;margin-bottom:6px;display:flex;justify-content:space-between"><span>👑 Most Wins</span><strong style="color:${COLOR_HEX[report.mostWins]||'var(--text)'}">${escHtml(report.mostWins)} (${report.winCounts[report.mostWins]})</strong></div>` : ''}
+          ${report.biggestOffender ? `<div style="background:rgba(255,68,68,.08);border:1px solid rgba(255,68,68,.2);border-radius:12px;padding:10px 14px;margin-bottom:6px;display:flex;justify-content:space-between"><span>🤬 Biggest Offender</span><strong style="color:${COLOR_HEX[report.biggestOffender]||'var(--text)'}">${escHtml(report.biggestOffender)} (${report.stats[report.biggestOffender]?.swears})</strong></div>` : ''}
+          ${report.cleanest ? `<div style="background:rgba(0,200,100,.08);border:1px solid rgba(0,200,100,.2);border-radius:12px;padding:10px 14px;margin-bottom:6px;display:flex;justify-content:space-between"><span>😇 Cleanest Mouth</span><strong style="color:${COLOR_HEX[report.cleanest]||'var(--text)'}">${escHtml(report.cleanest)} (${report.stats[report.cleanest]?.swears})</strong></div>` : ''}
+          ${report.mostImproved ? `<div style="background:rgba(255,167,38,.08);border:1px solid rgba(255,167,38,.2);border-radius:12px;padding:10px 14px;margin-bottom:6px;display:flex;justify-content:space-between"><span>📈 Most Improved</span><strong style="color:${COLOR_HEX[report.mostImproved]||'var(--text)'}">${escHtml(report.mostImproved)}</strong></div>` : ''}
+        </div>
+
+        <div style="text-align:left;margin-bottom:16px">
+          <div style="font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:8px">Per Person</div>
+          ${report.kids.map(kid => {
+            const s = report.stats[kid];
+            return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)">
+              <span style="font-weight:700;color:${COLOR_HEX[kid]||'var(--text)'}">${escHtml(kid)}</span>
+              <span style="font-size:13px;color:var(--muted)">${s.swears} swears · ${s.wins} wins</span>
+            </div>`;
+          }).join('')}
+        </div>
+
+        <button style="width:100%;padding:14px;border:none;border-radius:14px;background:linear-gradient(135deg,var(--purple),var(--pink));color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-bottom:8px" onclick="exportAnnualReportPDF(${report.year})">📄 Export as PDF</button>
+        <button style="width:100%;padding:12px;border:none;border-radius:14px;background:var(--surface2);color:var(--muted);font-size:14px;cursor:pointer" onclick="this.closest('[style*=fixed]').remove()">Close</button>
+      </div>`;
+
+    document.body.appendChild(overlay);
+  }
+
+  function exportAnnualReportPDF(year) {
+    const report = generateAnnualReport(year);
+    if (!report) return;
+    // Generate a printable HTML page and trigger print dialog (saves as PDF)
+    const win = window.open('', '_blank');
+    win.document.write(`<!DOCTYPE html><html><head><title>Swear Jar ${year} Report</title>
+      <style>body{font-family:-apple-system,sans-serif;max-width:600px;margin:40px auto;padding:20px;color:#333}
+      h1{text-align:center;font-size:28px}h2{font-size:18px;border-bottom:2px solid #7c4dff;padding-bottom:4px;margin-top:24px}
+      .stat{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee}
+      .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:12px 0}
+      .box{background:#f5f5f5;border-radius:12px;padding:16px;text-align:center}
+      .box .num{font-size:28px;font-weight:900}.box .label{font-size:12px;color:#888}
+      @media print{body{margin:0}}</style></head><body>
+      <h1>🤐 Swear Jar — ${year} Year in Review</h1>
+      <div class="grid">
+        <div class="box"><div class="num">${report.months}</div><div class="label">Months</div></div>
+        <div class="box"><div class="num">${report.totalSwears}</div><div class="label">Total Swears</div></div>
+        <div class="box"><div class="num">$${report.totalBudget}</div><div class="label">Total Budget</div></div>
+        <div class="box"><div class="num">${report.kids.length}</div><div class="label">Participants</div></div>
+      </div>
+      <h2>🏆 Awards</h2>
+      ${report.mostWins ? `<div class="stat"><span>👑 Most Wins</span><strong>${report.mostWins} (${report.winCounts[report.mostWins]})</strong></div>` : ''}
+      ${report.biggestOffender ? `<div class="stat"><span>🤬 Biggest Offender</span><strong>${report.biggestOffender} (${report.stats[report.biggestOffender]?.swears})</strong></div>` : ''}
+      ${report.cleanest ? `<div class="stat"><span>😇 Cleanest Mouth</span><strong>${report.cleanest} (${report.stats[report.cleanest]?.swears})</strong></div>` : ''}
+      ${report.mostImproved ? `<div class="stat"><span>📈 Most Improved</span><strong>${report.mostImproved}</strong></div>` : ''}
+      <h2>Per Person</h2>
+      ${report.kids.map(kid => `<div class="stat"><span>${kid}</span><span>${report.stats[kid].swears} swears · ${report.stats[kid].wins} wins</span></div>`).join('')}
+      <div style="text-align:center;margin-top:32px;color:#888;font-size:12px">Generated by Swear Jar App · ${new Date().toLocaleDateString()}</div>
+      </body></html>`);
+    win.document.close();
+    setTimeout(() => win.print(), 500);
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  CHARITY INTEGRATION
+  // ══════════════════════════════════════════════════════
+  const CHARITY_OPTIONS = [
+    { id: 'custom', name: 'Custom Charity', icon: '💝', url: '' },
+    { id: 'stjude', name: "St. Jude Children's", icon: '🏥', url: 'https://www.stjude.org/donate' },
+    { id: 'unicef', name: 'UNICEF', icon: '🌍', url: 'https://www.unicef.org/donate' },
+    { id: 'aspca', name: 'ASPCA', icon: '🐾', url: 'https://www.aspca.org/donate' },
+    { id: 'feedamerica', name: 'Feeding America', icon: '🍽️', url: 'https://www.feedingamerica.org/donate' },
+  ];
+
+  function getCharitySetting() {
+    try { return JSON.parse(localStorage.getItem('swearjar2-charity') || 'null'); } catch(e) { return null; }
+  }
+  function setCharitySetting(charity) {
+    localStorage.setItem('swearjar2-charity', JSON.stringify(charity));
+    if (fbDb) { try { fbDb.ref('/swearjar/charity').set(charity); } catch(e) {} }
+  }
+  function donateToCharity(amount, monthKey) {
+    const charity = getCharitySetting();
+    if (!charity) { toast('No charity configured — set one in Settings'); return; }
+    const url = charity.url || '';
+    if (url) {
+      window.open(url, '_blank');
+      toast(`🎁 Donating $${amount.toFixed(2)} to ${charity.name}! Opening donation page...`);
+    } else {
+      toast(`🎁 $${amount.toFixed(2)} designated for ${charity.name}`);
+    }
+    // Mark in monthly result
+    const result = state.monthlyResults.find(r => r.month === monthKey);
+    if (result) {
+      result.charityDonation = { charity: charity.name, amount, ts: new Date().toISOString() };
+      save();
+    }
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  PHOTO EVIDENCE
+  // ══════════════════════════════════════════════════════
+  function capturePhotoEvidence(kid, categoryId) {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment';
+    input.onchange = function() {
+      const file = input.files[0];
+      if (!file) { addSwear(kid, categoryId); return; }
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          const size = 120;
+          canvas.width = size; canvas.height = size;
+          const ctx = canvas.getContext('2d');
+          const srcSize = Math.min(img.width, img.height);
+          ctx.drawImage(img, (img.width-srcSize)/2, (img.height-srcSize)/2, srcSize, srcSize, 0, 0, size, size);
+          const photoData = canvas.toDataURL('image/jpeg', 0.4);
+          addSwearWithPhoto(kid, categoryId, photoData);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    };
+    input.click();
+  }
+
+  function addSwearWithPhoto(kid, categoryId, photoData) {
+    const category = (getActiveJar().categories || CHARGE_CATEGORIES).find(c => c.id === categoryId) || CHARGE_CATEGORIES[1];
+    const chargeAmount = category.amount;
+    if (!state.kids[kid]) state.kids[kid] = { deducted:0, swears:0, penalty:0 };
+    if (typeof state.kids[kid].deducted !== 'number' || isNaN(state.kids[kid].deducted)) state.kids[kid].deducted = 0;
+    if (typeof state.kids[kid].penalty !== 'number' || isNaN(state.kids[kid].penalty)) state.kids[kid].penalty = 0;
+    const remaining = getKidRemaining(kid);
+    if (remaining <= 0) { toast(`⛔ ${kid} has $0 left — no more charges this month`); return; }
+    if (chargeAmount > remaining) { toast(`⛔ ${kid} only has $${remaining.toFixed(2)} left`); return; }
+    haptic('medium');
+    state.kids[kid].deducted += chargeAmount;
+    state.kids[kid].swears++;
+    const entry = {
+      kid, ts: new Date().toISOString(), addedBy: currentUser ?? 'Unknown',
+      amount: chargeAmount, category: category.id, jar: activeJarId
+    };
+    if (photoData && photoData.length < 20000) entry.photo = photoData;
+    state.history.unshift(entry);
+    if (state.history.length > 500) state.history.length = 500;
+    fbTransaction(`/swearjar/gameState/kids/${kid}/deducted`, current => (parseFloat(current) || 0) + chargeAmount);
+    save(); render();
+    const newRemaining = getKidRemaining(kid);
+    toast(`${kid} -$${chargeAmount.toFixed(2)} ${category.emoji} 📸 · $${newRemaining.toFixed(2)} left`);
+  }
   // ══════════════════════════════════════════════════════
   function deleteAllUserData() {
     if (!confirm('⚠️ This will permanently delete ALL your data including history, settings, and monthly results. This cannot be undone. Continue?')) return;
@@ -2816,6 +3220,7 @@
 
   // Initialize theme before rendering
   initTheme();
+  applyFamilyTheme(loadFamilyTheme());
 
   render();
 

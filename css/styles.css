@@ -513,6 +513,37 @@
     .modal-confirm   { width: 100%; padding: 16px; border: none; border-radius: 16px; background: linear-gradient(135deg, var(--purple), var(--pink)); color: #fff; font-size: 16px; font-weight: 800; cursor: pointer; margin-bottom: 10px; }
     .modal-cancel    { width: 100%; padding: 14px; border: none; border-radius: 16px; background: var(--surface2); color: var(--muted); font-size: 15px; font-weight: 600; cursor: pointer; }
 
+    /* ════════ PHOTO EVIDENCE BUTTON ════════ */
+    .charge-photo-btn {
+      margin-top: 4px; width: 100%; padding: 8px;
+      background: var(--surface2); border: 1.5px dashed var(--border);
+      border-radius: 10px; color: var(--muted); font-size: 12px;
+      cursor: pointer; -webkit-appearance: none;
+      transition: border-color .15s;
+    }
+    .charge-photo-btn:active { border-color: var(--purple); }
+
+    /* ════════ JAR CHIPS ════════ */
+    .jar-chip {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 8px 14px; border: 1.5px solid var(--border);
+      border-radius: 20px; background: none; color: var(--text);
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      -webkit-appearance: none; position: relative;
+    }
+    .jar-chip.active { border-color: var(--purple); background: rgba(124,77,255,.1); }
+    .jar-chip:active { opacity: .7; }
+    .jar-chip-remove {
+      font-size: 14px; margin-left: 2px; color: var(--muted);
+      cursor: pointer; font-weight: 400;
+    }
+
+    /* ════════ CELEBRATION ANIMATION ════════ */
+    @keyframes celebFloat {
+      0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(-100vh) rotate(720deg); opacity: 0; }
+    }
+
     /* ════════ ACTION LOADING ════════ */
     .action-loading {
       position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%);
