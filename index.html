@@ -258,6 +258,24 @@
 
       <div class="settings-section-label" style="margin-top:8px">Save</div>
       <button class="btn-settings-save" onclick="saveSettingsFromForm()">Save Changes</button>
+
+      <!-- Family Sharing — admin only -->
+      <div id="family-section" style="display:none">
+        <div class="settings-section-label" style="margin-top:12px">Family Sharing</div>
+        <div class="settings-section-hint">Invite family members to join your swear jar. Share the link or QR code.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn-ghost" style="flex:1;padding:12px;border-radius:14px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:var(--surface2);color:var(--text)" onclick="generateInviteLink()">📋 Copy Invite Link</button>
+          <button class="btn-ghost" style="flex:1;padding:12px;border-radius:14px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:var(--surface2);color:var(--text)" onclick="generateInviteQR()">📱 Show QR Code</button>
+        </div>
+        <div class="settings-section-label" style="margin-top:12px">Account Recovery</div>
+        <div class="settings-section-hint">Save your recovery code in case you lose access to this device.</div>
+        <button class="btn-ghost" style="width:100%;padding:12px;border-radius:14px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:var(--surface2);color:var(--text)" onclick="showRecoveryCode()">🔑 Show Recovery Code</button>
+      </div>
+
+      <!-- Privacy & Data -->
+      <div class="settings-section-label" style="margin-top:12px">Privacy & Data</div>
+      <button class="btn-ghost" style="width:100%;padding:12px;border-radius:14px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:var(--surface2);color:var(--text);margin-bottom:8px" onclick="window.open('https://github.com/slydercg/swear-jar/blob/main/PRIVACY_POLICY.md','_blank')">📄 Privacy Policy</button>
+      <button class="btn-ghost" style="width:100%;padding:14px;border-radius:14px;font-size:13px;font-weight:700;cursor:pointer;border:2px solid rgba(255,68,68,.3);background:none;color:#ff6b6b" onclick="deleteAllUserData()">🗑️ Delete All My Data</button>
     </div>
   </div>
 

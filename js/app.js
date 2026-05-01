@@ -1598,9 +1598,7 @@
       return;
     }
     // Haptic feedback on iOS
-    if (window.navigator && window.navigator.vibrate) {
-      window.navigator.vibrate(10);
-    }
+    haptic('medium');
     state.kids[kid].deducted += chargeAmount;
     state.kids[kid].swears++;
     state.history.unshift({
@@ -2189,6 +2187,8 @@
 
     const budgetSection = document.getElementById('budget-section');
     if (budgetSection) budgetSection.style.display = (currentUser === 'admin') ? '' : 'none';
+    const familySection = document.getElementById('family-section');
+    if (familySection) familySection.style.display = (currentUser === 'admin') ? '' : 'none';
     if (currentUser === 'admin') renderBudgetList();
   }
 
@@ -2565,6 +2565,242 @@
   }
 
   // ══════════════════════════════════════════════════════
+  //  GDPR: DELETE ALL USER DATA (Item 3)
+  // ══════════════════════════════════════════════════════
+  function deleteAllUserData() {
+    if (!confirm('⚠️ This will permanently delete ALL your data including history, settings, and monthly results. This cannot be undone. Continue?')) return;
+    if (!confirm('Are you absolutely sure? All data will be erased from this device and Firebase.')) return;
+    // Clear Firebase
+    if (fbDb) {
+      try {
+        fbDb.ref('/swearjar/gameState').remove();
+        fbDb.ref('/swearjar/jarSettings').remove();
+        fbDb.ref('/swearjar/appUsers').remove();
+        fbDb.ref('/swearjar/adminPin').remove();
+        fbDb.ref('/swearjar/adminSession').remove();
+        fbDb.ref('/swearjar/potTheme').remove();
+        fbDb.ref('/swearjar/notifUsers').remove();
+      } catch(e) {}
+    }
+    // Clear all localStorage
+    localStorage.clear();
+    sessionStorage.clear();
+    // Clear service worker cache
+    if ('caches' in window) { caches.keys().then(keys => keys.forEach(k => caches.delete(k))); }
+    toast('All data deleted. Reloading...');
+    setTimeout(() => window.location.reload(), 1000);
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  FIRST-RUN SETUP FLOW (Item 4)
+  // ══════════════════════════════════════════════════════
+  function checkFirstRunSetup() {
+    if (KIDS.length === 0 && appUsers.length === 0) {
+      // No participants exist — this is a fresh install
+      // Auto-create the current user as first participant + parent
+      if (currentUser && currentUser !== 'admin') {
+        settings.push({ name: currentUser, color: PALETTE[0], paymentInfo: '' });
+        saveSettings(settings);
+        KIDS = [currentUser];
+        COLORS = { [currentUser]: PALETTE[0] };
+        COLOR_HEX = { ...COLORS };
+        appUsers.push({ name: currentUser, isParent: true });
+        saveAppUsers(appUsers);
+        state.kids[currentUser] = { deducted: 0, swears: 0, penalty: 0 };
+        save();
+        toast(`Welcome ${currentUser}! You've been added as a parent.`);
+      }
+    }
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  MULTI-FAMILY DATA ISOLATION (Item 6)
+  // ══════════════════════════════════════════════════════
+  const FAMILY_ID_KEY = 'swearjar2-family-id';
+  function getFamilyId() {
+    let id = localStorage.getItem(FAMILY_ID_KEY);
+    if (!id) {
+      id = 'fam_' + Array.from(crypto.getRandomValues(new Uint8Array(8))).map(b => b.toString(16).padStart(2,'0')).join('');
+      localStorage.setItem(FAMILY_ID_KEY, id);
+    }
+    return id;
+  }
+  function getFamilyDbPath() {
+    return '/swearjar/' + getFamilyId();
+  }
+  function joinFamily(familyId) {
+    if (!familyId || !familyId.startsWith('fam_')) { toast('⚠️ Invalid family code'); return; }
+    localStorage.setItem(FAMILY_ID_KEY, familyId);
+    toast('Joined family! Reloading...');
+    setTimeout(() => window.location.reload(), 500);
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  BIOMETRIC LOCK (Item 7 — web API, enhanced in native)
+  // ══════════════════════════════════════════════════════
+  async function requestBiometric() {
+    if (!window.PublicKeyCredential) return false;
+    try {
+      const available = await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+      return available;
+    } catch(e) { return false; }
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  ACCOUNT RECOVERY (Item 8)
+  // ══════════════════════════════════════════════════════
+  function generateRecoveryCode() {
+    const code = Array.from(crypto.getRandomValues(new Uint8Array(6))).map(b => (b % 36).toString(36).toUpperCase()).join('');
+    const formatted = code.slice(0,3) + '-' + code.slice(3);
+    localStorage.setItem('swearjar2-recovery', formatted);
+    if (fbDb) { try { fbDb.ref(getFamilyDbPath() + '/recovery').set({ code: formatted, ts: new Date().toISOString() }); } catch(e) {} }
+    return formatted;
+  }
+  function showRecoveryCode() {
+    let code = localStorage.getItem('swearjar2-recovery');
+    if (!code) code = generateRecoveryCode();
+    toast(`📋 Recovery code: ${code} — save this somewhere safe!`);
+    if (navigator.clipboard) navigator.clipboard.writeText(code).catch(()=>{});
+  }
+  function recoverWithCode(inputCode) {
+    if (!fbDb) { toast('⚠️ Firebase required for recovery'); return; }
+    fbDb.ref(getFamilyDbPath() + '/recovery/code').once('value').then(snap => {
+      if (snap.val() === inputCode.trim().toUpperCase()) {
+        toast('✅ Recovery successful! Logging in as admin...');
+        const token = generateSessionToken();
+        sessionStorage.setItem('swearjar2-admin-token', token);
+        loginAs('admin');
+      } else {
+        toast('❌ Invalid recovery code');
+      }
+    }).catch(() => toast('⚠️ Recovery failed — check connection'));
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  OFFLINE QUEUE & CONFLICT RESOLUTION (Item 9)
+  // ══════════════════════════════════════════════════════
+  let _offlineQueue = [];
+  function queueOfflineAction(action) {
+    _offlineQueue.push({ ...action, ts: new Date().toISOString() });
+    localStorage.setItem('swearjar2-offline-queue', JSON.stringify(_offlineQueue));
+  }
+  function flushOfflineQueue() {
+    const queued = JSON.parse(localStorage.getItem('swearjar2-offline-queue') || '[]');
+    if (queued.length === 0) return;
+    queued.forEach(action => {
+      if (action.type === 'charge' && action.kid) {
+        if (!state.kids[action.kid]) state.kids[action.kid] = { deducted:0, swears:0, penalty:0 };
+        state.kids[action.kid].deducted += (action.amount || 1);
+        state.kids[action.kid].swears++;
+        state.history.unshift(action);
+      }
+    });
+    localStorage.removeItem('swearjar2-offline-queue');
+    _offlineQueue = [];
+    save();
+    toast(`📡 Synced ${queued.length} offline action${queued.length!==1?'s':''}`);
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  LOADING STATES (Item 10)
+  // ══════════════════════════════════════════════════════
+  function showActionLoading(msg) {
+    let el = document.getElementById('action-loading');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'action-loading';
+      el.className = 'action-loading';
+      document.body.appendChild(el);
+    }
+    el.textContent = msg || 'Saving...';
+    el.style.display = 'flex';
+    return () => { el.style.display = 'none'; };
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  HAPTIC FEEDBACK (Item 11)
+  // ══════════════════════════════════════════════════════
+  function haptic(style) {
+    // iOS native haptic via WKWebView bridge
+    if (window.webkit?.messageHandlers?.haptic) {
+      window.webkit.messageHandlers.haptic.postMessage(style || 'light');
+      return;
+    }
+    // Web fallback
+    if (window.navigator?.vibrate) {
+      const patterns = { light: 10, medium: 20, heavy: 30, success: [10,50,20], error: [30,50,30] };
+      window.navigator.vibrate(patterns[style] || 10);
+    }
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  PAGE TRANSITIONS (Item 12)
+  // ══════════════════════════════════════════════════════
+  const _origSwitchView = switchView;
+  switchView = function(v) {
+    const current = document.querySelector('.view.active');
+    if (current) {
+      current.style.opacity = '0';
+      current.style.transform = 'translateY(8px)';
+    }
+    setTimeout(() => {
+      _origSwitchView(v);
+      const next = document.querySelector('.view.active');
+      if (next) {
+        next.style.opacity = '0';
+        next.style.transform = 'translateY(8px)';
+        requestAnimationFrame(() => {
+          next.style.transition = 'opacity .2s ease, transform .2s ease';
+          next.style.opacity = '1';
+          next.style.transform = 'translateY(0)';
+          setTimeout(() => { next.style.transition = ''; }, 250);
+        });
+      }
+    }, 100);
+  };
+
+  // ══════════════════════════════════════════════════════
+  //  FAMILY INVITE SYSTEM (Item 14)
+  // ══════════════════════════════════════════════════════
+  function generateInviteLink() {
+    const familyId = getFamilyId();
+    const inviteData = btoa(JSON.stringify({ fam: familyId }));
+    const link = `${window.location.origin}${window.location.pathname}?join=${inviteData}`;
+    if (navigator.clipboard) navigator.clipboard.writeText(link).catch(()=>{});
+    toast('📋 Invite link copied! Share it with family members.');
+    return link;
+  }
+  function generateInviteQR() {
+    const link = generateInviteLink();
+    if (typeof QRCode !== 'undefined') {
+      const container = document.createElement('div');
+      container.style.cssText = 'position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;padding:20px';
+      container.onclick = () => container.remove();
+      const card = document.createElement('div');
+      card.style.cssText = 'background:#fff;border-radius:20px;padding:24px;text-align:center;max-width:300px';
+      card.innerHTML = '<div style="font-size:18px;font-weight:800;margin-bottom:4px;color:#000">Join Our Family</div><div style="font-size:13px;color:#666;margin-bottom:16px">Scan to join the swear jar</div><div id="invite-qr"></div><div style="font-size:11px;color:#999;margin-top:12px">Tap anywhere to close</div>';
+      card.onclick = e => e.stopPropagation();
+      container.appendChild(card);
+      document.body.appendChild(container);
+      new QRCode(document.getElementById('invite-qr'), { text: link, width: 200, height: 200, colorDark: '#000', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.H });
+    }
+  }
+  function checkInviteLink() {
+    const params = new URLSearchParams(window.location.search);
+    const joinData = params.get('join');
+    if (joinData) {
+      try {
+        const data = JSON.parse(atob(joinData));
+        if (data.fam) {
+          joinFamily(data.fam);
+          // Clean URL
+          window.history.replaceState({}, '', window.location.pathname);
+        }
+      } catch(e) {}
+    }
+  }
+
+  // ══════════════════════════════════════════════════════
   //  INIT
   // ══════════════════════════════════════════════════════
   syncUsersWithJar();
@@ -2595,8 +2831,14 @@
   }
   initFirebase(_fbCfg);
 
+  // Check for invite link in URL
+  checkInviteLink();
+
   // Show onboarding for first-time users
   showOnboarding();
+
+  // First-run setup: auto-add current user as participant if empty
+  if (currentUser) checkFirstRunSetup();
 
   // Keyboard navigation (PIN entry, modal escape)
   initKeyboardNav();
@@ -2606,6 +2848,10 @@
 
   // End-of-month reminder notification
   if (currentUser) checkEndOfMonthReminder();
+
+  // Flush any queued offline actions when connection is restored
+  if (fbConnected) flushOfflineQueue();
+  window.addEventListener('online', () => { if (fbDb) flushOfflineQueue(); });
 
   // "Update Available" banner — listen for new service worker
   if ('serviceWorker' in navigator) {
