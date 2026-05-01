@@ -152,6 +152,35 @@
     <div class="header"><div class="header-row-bare"><div class="app-title">⚙️ Settings</div></div></div>
     <div class="settings-inner">
 
+      <!-- Jar Selector -->
+      <div class="settings-section-label">Active Jar</div>
+      <div class="settings-section-hint">Switch between jars or add new ones (Premium).</div>
+      <div id="jar-selector" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px"></div>
+      <div id="jar-templates" style="display:none">
+        <div class="settings-section-hint" style="margin-top:4px">Add a new jar:</div>
+        <div id="jar-template-list" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px"></div>
+      </div>
+
+      <!-- Family Theme -->
+      <div id="family-theme-section" style="display:none">
+        <div class="settings-section-label">Family Theme</div>
+        <div class="settings-section-hint">Change the entire app look (Premium).</div>
+        <div id="family-theme-picker" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px"></div>
+      </div>
+
+      <!-- Charity -->
+      <div id="charity-section" style="display:none">
+        <div class="settings-section-label">Charity Option</div>
+        <div class="settings-section-hint">Donate the monthly pot to charity instead of paying the winner.</div>
+        <div id="charity-picker"></div>
+      </div>
+
+      <!-- Annual Report -->
+      <div id="annual-report-section" style="display:none">
+        <div class="settings-section-label">Year in Review</div>
+        <button class="btn-ghost" style="width:100%;padding:12px;border-radius:14px;font-size:13px;font-weight:700;cursor:pointer;border:none;background:var(--surface2);color:var(--text)" onclick="showAnnualReport()">📊 View Annual Report</button>
+      </div>
+
       <div class="settings-section-label">People in the jar</div>
       <div id="settings-list"></div>
       <button class="settings-add-btn" onclick="addSettingsRow()">＋ Add Person</button>
