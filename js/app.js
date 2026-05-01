@@ -1080,9 +1080,8 @@
     const budget = getMonthBudget(month);
     const alloc = KIDS.length > 0 ? Math.round((budget / KIDS.length) * 100) / 100 : 0;
     const winners = getWinners();
-    const winnerPrize = winners.length > 0
-      ? Math.round(winners.reduce((s,k) => s + Math.max(0, getKidRemaining(k)), 0) * 100) / 100
-      : 0;
+    const totalDed = totalDeductedAll();
+    const winnerPrize = Math.max(0, Math.round((budget - totalDed) * 100) / 100);
 
     // Build result snapshot with remaining balances
     const kidsSnapshot = {};
@@ -1148,9 +1147,10 @@
     const wnEl = document.getElementById('announce-winner-name');
     wnEl.textContent = winners.join(' & ');
     wnEl.style.color = COLOR_HEX[winners[0]] ?? 'var(--text)';
+    const wp = winnerPrize ?? 0;
     const prizeText = winners.length > 1
-      ? `Each kept $${(winnerPrize / winners.length).toFixed(2)}`
-      : `Kept $${(winnerPrize ?? 0).toFixed(2)}!`;
+      ? `Split $${wp.toFixed ? wp.toFixed(2) : wp} ($${(wp / winners.length).toFixed(2)} each)`
+      : `Wins $${wp.toFixed ? wp.toFixed(2) : wp}!`;
     document.getElementById('announce-prize').textContent = prizeText;
 
     // Leaderboard
@@ -1525,17 +1525,18 @@
   }
 
   function openEndMonth() {
+    const budget = getMonthBudget(currentMonthKey());
     const alloc = getCurrentAllocation();
     const winners = getWinners();
     // Sort by remaining (highest first = winner)
     const sorted = [...KIDS].sort((a,b) => getKidRemaining(b) - getKidRemaining(a));
     const totalDed = totalDeductedAll();
-    const winnerPrize = winners.reduce((s,k) => s + Math.max(0, getKidRemaining(k)), 0).toFixed(2);
+    const potLeft = Math.max(0, Math.round((budget - totalDed) * 100) / 100);
     document.getElementById('modal-sub').textContent =
-      totalDed === 0 ? 'No swears this month — everyone keeps their share! 🎉'
-      : winners.length>1 ? `${winners.join(' & ')} tied with the most remaining!`
-      : `${winners[0]} kept the most money!`;
-    const prize = winners.length > 1 ? `Each kept $${(winnerPrize/winners.length).toFixed(2)}` : `Kept $${winnerPrize}!`;
+      totalDed === 0 ? 'No swears this month — everyone splits the pot! 🎉'
+      : winners.length>1 ? `${winners.join(' & ')} tied — they split $${potLeft.toFixed(2)}!`
+      : `${winners[0]} wins the remaining $${potLeft.toFixed(2)}!`;
+    const prize = winners.length > 1 ? `Split $${potLeft.toFixed(2)} (${(potLeft/winners.length).toFixed(2)} each)` : `Wins $${potLeft.toFixed(2)}!`;
     document.getElementById('modal-winner-box').innerHTML = `
       <div class="modal-trophy">${winners.length>1?'🤝':'🏆'}</div>
       <div class="modal-winner-name" style="color:${COLOR_HEX[winners[0]]}">${winners.join(' & ')}</div>
@@ -1561,7 +1562,8 @@
     const winners = getWinners(), month = currentMonthKey();
     const budget = getMonthBudget(month);
     const alloc = getCurrentAllocation();
-    const winnerPrize = winners.reduce((s,k) => s + Math.max(0, getKidRemaining(k)), 0).toFixed(2);
+    const totalDed = totalDeductedAll();
+    const winnerPrize = Math.max(0, Math.round((budget - totalDed) * 100) / 100);
     // Build result with overflow tracking
     const kidsSnapshot = {};
     const overflows = {};
@@ -1587,14 +1589,15 @@
         };
       }
     });
-    state.monthlyResults.unshift({ month, winners, budget, allocation: alloc, winnerPrize: parseFloat(winnerPrize), kids: kidsSnapshot, payments });
+    state.monthlyResults.unshift({ month, winners, budget, allocation: alloc, winnerPrize, kids: kidsSnapshot, payments });
     KIDS.forEach(k=>{state.kids[k]={deducted:0,swears:0,penalty:overflows[k]||0};});
     state.history=[];
     save(); closeModal(); render(); switchView('tracker');
     // Show the winner announcement with payment buttons
     const latestResult = state.monthlyResults[0];
     if (budget > 0) showWinnerAnnouncement(latestResult);
-    toast(`${winners.join(' & ')} keep${winners.length>1?'':'s'} $${winnerPrize}! 🏆`);
+    const prizePerWinner = winners.length > 1 ? (winnerPrize / winners.length).toFixed(2) : winnerPrize.toFixed(2);
+    toast(`${winners.join(' & ')} win${winners.length>1?'':'s'} $${prizePerWinner}${winners.length>1?' each':''}! 🏆`);
   }
 
   function closeModal() { document.getElementById('overlay').classList.remove('open'); }
@@ -1618,20 +1621,22 @@
     const potRemaining = totalPotRemaining();
     const winners = getWinners(), worst = getWorst();
     document.getElementById('month-chip').textContent = formatMonthKey(currentMonthKey());
-    document.getElementById('pot-amount').textContent = `$${budget.toFixed(0)}`;
+    const totalDed = totalDeductedAll();
+    const potLeft = Math.max(0, Math.round((budget - totalDed) * 100) / 100);
+    document.getElementById('pot-amount').textContent = `$${potLeft.toFixed(2)}`;
     // Show per-person breakdown
     const potLabelEl = document.getElementById('pot-label');
-    if (potLabelEl) potLabelEl.textContent = `💰 Month's Pot`;
+    if (potLabelEl) potLabelEl.textContent = `💰 Remaining of $${budget.toFixed(0)}`;
     const potSubEl = document.getElementById('pot-sub');
     if (potSubEl) potSubEl.textContent = `${KIDS.length} participants · $${alloc.toFixed(2)} each`;
     // Show who's winning and their remaining amount
     const potLeaderEl = document.getElementById('pot-leader');
-    if (totalDeductedAll() > 0 && winners.length > 0) {
-      const winnerRemaining = getKidRemaining(winners[0]);
+    if (totalDed > 0 && winners.length > 0) {
       const winnerNames = winners.length > 2
         ? `${winners[0]} +${winners.length - 1} more`
         : winners.join(' & ');
-      potLeaderEl.innerHTML = `<span>${escHtml(winnerNames)}</span><span class="pot-leader-amount">$${winnerRemaining.toFixed(2)} left</span>`;
+      const prizePerWinner = winners.length > 1 ? (potLeft / winners.length).toFixed(2) : potLeft.toFixed(2);
+      potLeaderEl.innerHTML = `<span>${escHtml(winnerNames)}</span><span class="pot-leader-amount">wins $${prizePerWinner}</span>`;
     } else {
       potLeaderEl.textContent = '—';
     }
@@ -1769,8 +1774,8 @@
     const wColor = COLOR_HEX[winners[0]] ?? 'var(--text)';
     const prize = r.winnerPrize ?? r.pot ?? 0;
     const prizeStr = winners.length > 1
-      ? `Each kept $${(prize / winners.length).toFixed(2)}`
-      : `Kept $${prize.toFixed ? prize.toFixed(2) : prize}`;
+      ? `Split $${prize.toFixed ? prize.toFixed(2) : prize} ($${(prize / winners.length).toFixed(2)} each)`
+      : `Wins $${prize.toFixed ? prize.toFixed(2) : prize}!`;
     const medals = ['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣'];
 
     // Payment section
