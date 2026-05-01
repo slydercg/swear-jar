@@ -17,7 +17,7 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>2.0.0</string>
+    <string>2.1.0</string>
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>LSRequiresIPhoneOS</key>
@@ -27,10 +27,14 @@
         <key>NSAllowsArbitraryLoads</key>
         <true/>
     </dict>
+    <key>NSFaceIDUsageDescription</key>
+    <string>Use Face ID to access admin settings</string>
     <key>UILaunchScreen</key>
     <dict>
         <key>UIColorName</key>
         <string>LaunchBackground</string>
+        <key>UIImageName</key>
+        <string>LaunchIcon</string>
     </dict>
     <key>UIRequiredDeviceCapabilities</key>
     <array>
@@ -44,5 +48,9 @@
     <string>UIStatusBarStyleLightContent</string>
     <key>UIViewControllerBasedStatusBarAppearance</key>
     <false/>
+    <key>UIBackgroundModes</key>
+    <array>
+        <string>remote-notification</string>
+    </array>
 </dict>
 </plist>
