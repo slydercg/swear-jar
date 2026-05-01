@@ -892,11 +892,13 @@
     
     // Show "I've Paid This" button if user is viewing their own payment
     const markPaidBtn = document.getElementById('qr-mark-paid');
-    if (monthKey && currentUser === name) {
-      markPaidBtn.style.display = 'block';
-      markPaidBtn.onclick = () => markAsPaid(monthKey, name);
-    } else {
-      markPaidBtn.style.display = 'none';
+    if (markPaidBtn) {
+      if (monthKey && currentUser === name) {
+        markPaidBtn.style.display = 'block';
+        markPaidBtn.onclick = () => markAsPaid(monthKey, name);
+      } else {
+        markPaidBtn.style.display = 'none';
+      }
     }
 
     // Show modal
@@ -1597,7 +1599,8 @@
   //  ACTIONS
   // ══════════════════════════════════════════════════════
   function addSwear(kid, categoryId) {
-    const category = CHARGE_CATEGORIES.find(c => c.id === categoryId) || CHARGE_CATEGORIES[1];
+    const jarCats = getActiveJar().categories || CHARGE_CATEGORIES;
+    const category = jarCats.find(c => c.id === categoryId) || jarCats[1] || CHARGE_CATEGORIES[1];
     const chargeAmount = category.amount;
     // Check remaining balance before charging
     if (!state.kids[kid]) state.kids[kid] = { deducted:0, swears:0, penalty:0 };
@@ -1618,7 +1621,7 @@
     state.kids[kid].swears++;
     state.history.unshift({
       kid, ts: new Date().toISOString(), addedBy: currentUser ?? 'Unknown',
-      amount: chargeAmount, category: category.id
+      amount: chargeAmount, category: category.id, jar: activeJarId
     });
     if (state.history.length > 500) state.history.length = 500;
     // Use transaction for the kid's deducted value to prevent race conditions
@@ -1745,6 +1748,10 @@
 
   function render() {
     applyPotTheme(loadPotTheme());
+    // Show active jar in header
+    const titleEl = document.getElementById('app-title');
+    const jar = getActiveJar();
+    if (titleEl) titleEl.textContent = `${jar.icon} ${jar.name}`;
     const budget = getMonthBudget(currentMonthKey());
     const alloc = getCurrentAllocation();
     const potRemaining = totalPotRemaining();
@@ -2804,8 +2811,10 @@
     if (!report) return;
 
     const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;inset:0;z-index:960;background:rgba(0,0,0,.9);display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto';
+    const isDark = !document.body.classList.contains('light-mode');
+    overlay.style.cssText = `position:fixed;inset:0;z-index:960;background:${isDark?'rgba(0,0,0,.9)':'rgba(0,0,0,.5)'};display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto`;
     overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
+    document.addEventListener('keydown', function _esc(e) { if (e.key==='Escape') { overlay.remove(); document.removeEventListener('keydown',_esc); } });
 
     overlay.innerHTML = `
       <div style="background:var(--surface);border-radius:28px;padding:28px 22px;max-width:440px;width:100%;text-align:center;border:1px solid var(--border)">
