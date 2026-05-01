@@ -379,7 +379,7 @@
     const el = document.getElementById('alexa-examples');
     if (!el) return;
     const examples = KIDS.map(k => ({
-      wake: 'Alexa, tell slyder swear jar to',
+      wake: 'Alexa, tell swear jar to',
       cmd:  `charge ${k}`
     }));
     // Show first 3 examples + an alternate phrasing
@@ -389,7 +389,7 @@
         <span class="command"> ${e.cmd}</span>
       </div>`
     ).join('') + `<div class="alexa-example-row">
-      <span class="wake">Alexa, ask slyder swear jar to</span>
+      <span class="wake">Alexa, ask swear jar to</span>
       <span class="command"> charge ${KIDS[0]||'Delaney'} ten dollars</span>
     </div>`;
   }

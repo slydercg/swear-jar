@@ -1,7 +1,7 @@
 {
   "interactionModel": {
     "languageModel": {
-      "invocationName": "slyder swear jar",
+      "invocationName": "swear jar",
       "intents": [
         {
           "name": "ChargeKidIntent",

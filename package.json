@@ -1,7 +1,7 @@
 {
   "name": "swear-jar",
   "version": "2.0.0",
-  "description": "Slyder Swear Jar - Track swear jar fines for the family",
+  "description": "Swear Jar - Track swear jar fines for the family",
   "private": true,
   "scripts": {
     "lint": "eslint js/ alexa-lambda/",

@@ -1,5 +1,5 @@
 /**
- * Slyder Swear Jar – Alexa Skill Lambda
+ * Swear Jar – Alexa Skill Lambda
  * ======================================
  * Alexa-Hosted Node.js (no external npm packages beyond ask-sdk-core).
  * Uses the built-in `https` module to read/write Firebase Realtime Database
@@ -418,7 +418,7 @@ const LaunchRequestHandler = {
     const KID_NAMES = await fetchKidNames();
     const names     = Object.values(KID_NAMES);
     return handlerInput.responseBuilder
-      .speak('Welcome to Slyder Swear Jar! You can charge someone, ask who\'s winning, get a daily summary, or check streaks. What would you like to do?')
+      .speak('Welcome to Swear Jar! You can charge someone, ask who\'s winning, get a daily summary, or check streaks. What would you like to do?')
       .reprompt('You can say charge followed by a name, who\'s winning, daily summary, or check streak. Names are ' + names.join(', ') + '.')
       .getResponse();
   },

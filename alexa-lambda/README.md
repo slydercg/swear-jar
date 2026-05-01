@@ -1,6 +1,6 @@
-# Slyder Swear Jar – Alexa Skill Setup
+# Swear Jar – Alexa Skill Setup
 
-Connect your Alexa to the Slyder Swear Jar so you can say:
+Connect your Alexa to the Swear Jar so you can say:
 
 > **"Alexa, tell swear jar to charge Delaney"**
 
@@ -21,7 +21,7 @@ Connect your Alexa to the Slyder Swear Jar so you can say:
 1. Go to [developer.amazon.com/alexa/console/ask](https://developer.amazon.com/alexa/console/ask) and sign in.
 2. Click **Create Skill**.
 3. Fill in:
-   - **Skill name**: `Slyder Swear Jar`
+   - **Skill name**: `Swear Jar`
    - **Primary locale**: English (US)
    - **Model**: Custom
    - **Hosting**: Alexa-hosted (Node.js)
@@ -71,7 +71,7 @@ Connect your Alexa to the Slyder Swear Jar so you can say:
    https://developer.amazon.com/alexa/console/ask/build/custom/amzn1.ask.skill.XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX/...
    ```
 4. Copy the `amzn1.ask.skill.XXXX...` portion.
-5. Open the **Slyder Swear Jar** app on your phone/browser.
+5. Open the **Swear Jar** app on your phone/browser.
 6. Go to **Settings** (bottom bar) and log in as **admin**.
 7. Scroll to **Alexa Integration** and paste your Skill ID.
 8. Tap **Save Settings**.
