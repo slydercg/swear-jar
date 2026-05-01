@@ -562,18 +562,19 @@
 
   async function loadAdminPinHash() {
     if (_adminPinHash) return _adminPinHash;
-    if (fbDb) {
-      try {
-        const snap = await fbDb.ref('/swearjar/adminPin').once('value');
-        if (snap.val()) { _adminPinHash = snap.val(); return _adminPinHash; }
-      } catch(e) {}
-    }
-    // Compute default and persist to Firebase
+    // Try localStorage first (PIN hash cached after initial setup)
+    const cached = localStorage.getItem('swearjar2-pin-hash');
+    if (cached && cached.length === 64) { _adminPinHash = cached; return _adminPinHash; }
+    // Compute default and persist (adminPin is write-only in Firebase)
     _adminPinHash = await sha256(DEFAULT_ADMIN_PIN);
-    if (fbDb) {
-      try { fbDb.ref('/swearjar/adminPin').set(_adminPinHash); } catch(e) {}
-    }
+    localStorage.setItem('swearjar2-pin-hash', _adminPinHash);
+    if (fbDb) { try { fbDb.ref('/swearjar/adminPin').set(_adminPinHash); } catch(e) {} }
     return _adminPinHash;
+  }
+  function updateAdminPinHash(newHash) {
+    _adminPinHash = newHash;
+    localStorage.setItem('swearjar2-pin-hash', newHash);
+    if (fbDb) { try { fbDb.ref('/swearjar/adminPin').set(newHash); } catch(e) {} }
   }
 
   function showPinModal() {
@@ -1344,6 +1345,20 @@
     const d=new Date(iso); return `${MONTHS[d.getMonth()].slice(0,3)} ${d.getDate()}`;
   }
   function escHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/`/g,'&#96;'); }
+
+  // Payment info obfuscation — prevents casual Firebase browsing
+  const _payKey = 'swearjar-pay-v1';
+  function obfuscatePayInfo(plain) {
+    if (!plain) return '';
+    return btoa(Array.from(plain).map((c,i) => String.fromCharCode(c.charCodeAt(0) ^ _payKey.charCodeAt(i % _payKey.length))).join(''));
+  }
+  function deobfuscatePayInfo(encoded) {
+    if (!encoded) return '';
+    try {
+      const decoded = atob(encoded);
+      return Array.from(decoded).map((c,i) => String.fromCharCode(c.charCodeAt(0) ^ _payKey.charCodeAt(i % _payKey.length))).join('');
+    } catch(e) { return encoded; }
+  }
   function escAttr(s) { return escHtml(String(s)).replace(/\\/g, '\\\\'); }
   function copyToClipboard(text) { navigator.clipboard?.writeText(text).catch(()=>{}); toast(`Copied: ${text} 📋`); }
 
@@ -1536,9 +1551,25 @@
     }
   }
 
+  let _adminTokenVerified = false;
   function isValidAdminSession() {
     if (currentUser !== 'admin') return false;
-    return !!sessionStorage.getItem('swearjar2-admin-token');
+    const token = sessionStorage.getItem('swearjar2-admin-token');
+    if (!token) return false;
+    // Async verification against Firebase (non-blocking; cached after first check)
+    if (!_adminTokenVerified && fbDb) {
+      fbDb.ref('/swearjar/adminSession/token').once('value').then(snap => {
+        if (snap.val() !== token) {
+          sessionStorage.removeItem('swearjar2-admin-token');
+          _adminTokenVerified = false;
+          toast('⚠️ Admin session expired — please log in again');
+          promptSwitchUser();
+        } else {
+          _adminTokenVerified = true;
+        }
+      }).catch(() => {});
+    }
+    return true;
   }
 
   function isCurrentUserParent() {
@@ -1645,6 +1676,7 @@
   }
 
   function confirmEndMonth() {
+    backupStateForUndo();
     const winners = getWinners(), month = currentMonthKey();
     const budget = getMonthBudget(month);
     const alloc = getCurrentAllocation();
@@ -2058,14 +2090,16 @@
       }
     });
 
-    // Past months
+    // Past months with payment status
     (state.monthlyResults || []).forEach(result => {
       const monthLabel = formatMonthKey(result.month);
       Object.entries(result.kids || {}).forEach(([kid, data]) => {
-        rows.push([monthLabel, '', kid, `$${data.amount || 0}`, '', '', `Monthly Total (${data.swears || 0} swears)`]);
+        const payment = result.payments?.[kid];
+        const payStatus = payment ? (payment.paid ? 'Paid' : `Owes $${payment.amount}`) : (result.winners?.includes(kid) ? 'Winner' : '');
+        rows.push([monthLabel, '', kid, `$${data.remaining ?? data.amount ?? 0} remaining`, '', payStatus, `Monthly (${data.swears || 0} swears)`]);
       });
       if (result.winners) {
-        rows.push([monthLabel, '', result.winners.join(' & '), `$${result.pot || 0}`, '', '', 'Winner']);
+        rows.push([monthLabel, '', result.winners.join(' & '), `$${result.winnerPrize ?? result.pot ?? 0}`, '', '', 'Winner']);
       }
     });
 
@@ -2422,6 +2456,115 @@
   if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(()=>{}); }
 
   // ══════════════════════════════════════════════════════
+  //  ONBOARDING TUTORIAL
+  // ══════════════════════════════════════════════════════
+  const ONBOARD_STEPS = [
+    { emoji: '🤐', title: 'Welcome to Swear Jar!', text: 'A fun family challenge to keep language clean. Set a monthly budget, and every swear costs money from the pot.' },
+    { emoji: '💰', title: 'How it works', text: 'Each month starts with a pot (e.g. $60). It\'s divided equally among all participants. Every time someone swears, money is deducted from their share.' },
+    { emoji: '🏆', title: 'Winning', text: 'At month\'s end, the person with the most money left wins the entire remaining pot! Ties split it evenly.' },
+    { emoji: '😬🤬🔥', title: '3 severity levels', text: 'Mild ($0.50), Moderate ($1.00), and Severe ($2.00). Choose the right level when logging a charge.' },
+    { emoji: '🔐', title: 'Admin controls', text: 'Log in as Admin with your PIN to manage budgets, participants, and payment settings. Parents can resolve disputes.' },
+  ];
+  let _onboardStep = 0;
+  function showOnboarding() {
+    if (localStorage.getItem('swearjar2-onboarded') === '1') return;
+    _onboardStep = 0;
+    renderOnboardStep();
+    document.getElementById('onboarding-overlay').classList.remove('hidden');
+  }
+  function renderOnboardStep() {
+    const step = ONBOARD_STEPS[_onboardStep];
+    document.getElementById('onboard-step').innerHTML = `
+      <div class="onboarding-emoji">${step.emoji}</div>
+      <div class="onboarding-title">${step.title}</div>
+      <div class="onboarding-text">${step.text}</div>`;
+    document.getElementById('onboard-dots').innerHTML = ONBOARD_STEPS.map((_,i) =>
+      `<div class="onboarding-dot ${i===_onboardStep?'active':''}"></div>`).join('');
+    document.getElementById('onboard-btn').textContent = _onboardStep < ONBOARD_STEPS.length - 1 ? 'Next →' : 'Get Started!';
+  }
+  function advanceOnboarding() {
+    _onboardStep++;
+    if (_onboardStep >= ONBOARD_STEPS.length) { skipOnboarding(); return; }
+    renderOnboardStep();
+  }
+  function skipOnboarding() {
+    localStorage.setItem('swearjar2-onboarded', '1');
+    document.getElementById('onboarding-overlay').classList.add('hidden');
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  KID-SAFE MODE
+  // ══════════════════════════════════════════════════════
+  function isKidSafeUser() {
+    if (!currentUser) return false;
+    if (currentUser === 'admin') return false;
+    if (isCurrentUserParent()) return false;
+    return KIDS.includes(currentUser);
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  MONTH-END UNDO
+  // ══════════════════════════════════════════════════════
+  let _lastMonthEndBackup = null;
+  let _undoMonthTimer = null;
+
+  function backupStateForUndo() {
+    _lastMonthEndBackup = JSON.parse(JSON.stringify(state));
+    clearTimeout(_undoMonthTimer);
+    _undoMonthTimer = setTimeout(() => { _lastMonthEndBackup = null; }, 30000);
+  }
+
+  function undoMonthEnd() {
+    if (!_lastMonthEndBackup) { toast('⚠️ Undo window expired'); return; }
+    state = _lastMonthEndBackup;
+    _lastMonthEndBackup = null;
+    clearTimeout(_undoMonthTimer);
+    save(); render();
+    toast('↩ Month-end reset undone!');
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  END-OF-MONTH REMINDER
+  // ══════════════════════════════════════════════════════
+  function checkEndOfMonthReminder() {
+    if (!currentUser || !('Notification' in window) || Notification.permission !== 'granted') return;
+    const { left } = getDaysLeftEST();
+    const reminderKey = `swearjar2-eom-remind-${currentMonthKey()}`;
+    if (left <= 3 && left > 0 && !localStorage.getItem(reminderKey)) {
+      localStorage.setItem(reminderKey, '1');
+      try {
+        new Notification('🏆 Swear Jar', {
+          body: `Only ${left} day${left!==1?'s':''} left this month! Who's going to win?`,
+          icon: '/swear-jar/icon-192.png',
+          tag: 'eom-reminder',
+        });
+      } catch(e) {}
+    }
+  }
+
+  // ══════════════════════════════════════════════════════
+  //  ACCESSIBILITY — KEYBOARD NAV
+  // ══════════════════════════════════════════════════════
+  function initKeyboardNav() {
+    document.addEventListener('keydown', function(e) {
+      const pinOverlay = document.getElementById('pin-overlay');
+      if (pinOverlay && pinOverlay.classList.contains('open')) {
+        if (e.key >= '0' && e.key <= '9') { pinKey(e.key); e.preventDefault(); }
+        else if (e.key === 'Backspace') { pinBackspace(); e.preventDefault(); }
+        else if (e.key === 'Escape') { closePinModal(); e.preventDefault(); }
+      }
+      const overlay = document.getElementById('overlay');
+      if (overlay && overlay.classList.contains('open') && e.key === 'Escape') {
+        closeModal(); e.preventDefault();
+      }
+      const announce = document.getElementById('announce-overlay');
+      if (announce && !announce.classList.contains('hidden') && e.key === 'Escape') {
+        dismissAnnouncement(); e.preventDefault();
+      }
+    });
+  }
+
+  // ══════════════════════════════════════════════════════
   //  INIT
   // ══════════════════════════════════════════════════════
   syncUsersWithJar();
@@ -2452,8 +2595,29 @@
   }
   initFirebase(_fbCfg);
 
+  // Show onboarding for first-time users
+  showOnboarding();
+
+  // Keyboard navigation (PIN entry, modal escape)
+  initKeyboardNav();
+
   // Check for month rollover every 60s (catches devices left open overnight)
   setInterval(checkMonthRollover, 60000);
+
+  // End-of-month reminder notification
+  if (currentUser) checkEndOfMonthReminder();
+
+  // "Update Available" banner — listen for new service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      const banner = document.createElement('div');
+      banner.className = 'update-banner';
+      banner.textContent = '🔄 Update available — tap to refresh';
+      banner.style.display = 'block';
+      banner.onclick = () => window.location.reload();
+      document.body.appendChild(banner);
+    });
+  }
 
   // ══════════════════════════════════════════════════════
   //  PULL-TO-REFRESH (iOS-style)
