@@ -2212,8 +2212,8 @@
     }
 
     // Family theme picker (admin only)
-    const themeSection = document.getElementById('family-theme-section');
-    if (themeSection) themeSection.style.display = (currentUser === 'admin') ? '' : 'none';
+    const familyThemeSection = document.getElementById('family-theme-section');
+    if (familyThemeSection) familyThemeSection.style.display = (currentUser === 'admin') ? '' : 'none';
     if (currentUser === 'admin') {
       const picker = document.getElementById('family-theme-picker');
       if (picker) {
